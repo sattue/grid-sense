@@ -13,10 +13,10 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID", storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyBJU2gJClogFO6Gsyhhuv8CfsEZ1nAXDwM", authDomain: "gridsense-8be29.firebaseapp.com",
+    databaseURL: "https://gridsense-8be29-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "gridsense-8be29", storageBucket: "gridsense-8be29.firebasestorage.app",
+    messagingSenderId: "272934921898", appId: "1:272934921898:web:729f6aab5c735db5cf12d3"
   };
   try {
     const app = initializeApp(firebaseConfig);
@@ -68,91 +68,8 @@ body::before {
     radial-gradient(ellipse 50% 50% at 90% 80%, rgba(0,144,255,0.06) 0%, transparent 60%);
 }
 
-/* ── SCREENS ─────────────────────────────────────────────────── */
-.screen { display: none; }
-.screen.active { display: block; }
-
-/* ── LOGIN PAGE ──────────────────────────────────────────────── */
-#login-screen {
-  min-height: 100vh;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-}
-#login-screen.active { display: flex; }
-
-.login-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 48px 40px 40px;
-  width: 400px;
-  max-width: 92vw;
-  position: relative;
-  box-shadow: 0 32px 80px rgba(92, 32, 32, 0.5);
-}
-.login-box::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:3px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: 20px 20px 0 0;
-}
-.login-logo { text-align:center; margin-bottom:32px; }
-.login-logo .logo-icon {
-  width:56px; height:56px; border-radius:14px; margin:0 auto 12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:flex; align-items:center; justify-content:center; font-size:26px;
-}
-.login-logo .logo-name { font-size:26px; font-weight:800; letter-spacing:-0.5px; }
-.login-logo .logo-name span { color:var(--accent); }
-.login-logo p { font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-top:4px; }
-
-.form-label {
-  font-family:var(--font-mono); font-size:10px; color:var(--muted);
-  text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;
-}
-.form-input {
-  width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
-  padding:11px 14px; color:var(--text); font-family:var(--font-mono); font-size:12px;
-  outline:none; margin-bottom:16px; transition:border-color 0.2s;
-}
-.form-input:focus { border-color: var(--accent2); }
-.form-input::placeholder { color: var(--muted); }
-
-.btn-primary {
-  width:100%; background:linear-gradient(135deg,var(--accent),var(--accent2));
-  border:none; border-radius:8px; padding:13px; color:#0a0d12;
-  font-family:var(--font-head); font-size:14px; font-weight:800;
-  cursor:pointer; transition:opacity 0.2s; margin-top:4px;
-}
-.btn-primary:hover { opacity:0.88; }
-.btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
-
-.form-error {
-  font-family:var(--font-mono); font-size:11px; color:var(--warn);
-  margin-bottom:12px; display:none; padding:8px 12px;
-  background:rgba(255,107,53,0.1); border-radius:6px; border:1px solid rgba(255,107,53,0.3);
-}
-.form-error.show { display:block; }
-
-/* Verify screen */
-.otp-inputs { display:flex; gap:8px; justify-content:center; margin:20px 0; }
-.otp-digit {
-  width:44px; height:52px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font-mono); font-size:20px;
-  font-weight:700; text-align:center; outline:none; transition:border-color 0.2s;
-}
-.otp-digit:focus { border-color:var(--accent2); }
-.resend-btn {
-  background:none; border:none; color:var(--accent2); font-family:var(--font-mono);
-  font-size:11px; cursor:pointer; opacity:0.5; pointer-events:none; transition:opacity 0.2s;
-}
-.resend-btn.ready { opacity:1; pointer-events:all; }
-
 /* ── LAYOUT ──────────────────────────────────────────────────── */
-#dashboard-screen { display:none; }
-#dashboard-screen.active { display:block; }
+#dashboard-screen { display:block; }
 .page {
   position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:32px 20px 60px;
 }
@@ -505,87 +422,7 @@ textarea.field-input { min-height:100px; resize:vertical; font-family:var(--font
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════
-     LOGIN SCREEN
-════════════════════════════════════════════════════════════ -->
-<div id="login-screen" class="active">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="logo-icon">⚡</div>
-      <div class="logo-name">Grid<span>Sense</span></div>
-      <p>Smart Energy Monitoring System</p>
-    </div>
-
-    <!-- Step 1: Email + Password -->
-    <div id="step-login">
-      <div class="form-error" id="login-error"></div>
-      <label class="form-label">Email</label>
-      <input class="form-input" id="login-email" type="email" placeholder="you@example.com" />
-      <label class="form-label">Password</label>
-      <input class="form-input" id="login-pass" type="password" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter')doLogin()" />
-      <button class="btn-primary" onclick="doLogin()">Login →</button>
-      <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-top:16px;">
-        Demo credentials: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="741510191d1a3413061d1007111a07115a1d1b">[email&#160;protected]</a> / gridsense123
-      </p>
-    </div>
-
-    <!-- Step 2: OTP Verify -->
-    <div id="step-verify" style="display:none;">
-      <div style="text-align:center;margin-bottom:8px;">
-        <div style="font-size:28px;">📧</div>
-        <div style="font-weight:700;margin:8px 0 4px;">Check your email</div>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">
-          A 6-digit code was sent to <span id="verify-email-label"></span>
-        </div>
-      </div>
-      <div class="form-error" id="verify-error"></div>
-      <div class="otp-inputs" id="otp-inputs">
-        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
-        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
-        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
-        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
-        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
-        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
-      </div>
-      <button class="btn-primary" onclick="doVerify()">Verify Code →</button>
-      <div style="text-align:center;margin-top:14px;">
-        <button class="resend-btn" id="resend-btn" onclick="resendOTP()">Resend code</button>
-        <span id="resend-timer" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);"></span>
-      </div>
-      <div style="text-align:center;margin-top:16px;">
-        <button onclick="backToLogin()" style="background:none;border:none;color:var(--muted);font-family:var(--font-mono);font-size:10px;cursor:pointer;">← Back to login</button>
-      </div>
-    </div>
-
-    <!-- // ADD THIS: Signup Form -->
-    <div id="step-signup" style="display:none;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:24px;">✨</div>
-        <div style="font-weight:700;margin:8px 0 4px;">Create Account</div>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Sign up for GridSense</div>
-      </div>
-      <div class="form-error" id="signup-error"></div>
-      <label class="form-label">Email</label>
-      <input class="form-input" id="signup-email" type="email" placeholder="you@example.com" />
-      <label class="form-label">Password</label>
-      <input class="form-input" id="signup-pass" type="password" placeholder="Min. 6 characters"
-        onkeydown="if(event.key==='Enter')doSignup()" />
-      <button class="btn-primary" onclick="doSignup()">Create Account →</button>
-      <div style="text-align:center;margin-top:14px;">
-        <button onclick="backToLogin()" style="background:none;border:none;color:var(--muted);font-family:var(--font-mono);font-size:10px;cursor:pointer;">← Back to login</button>
-      </div>
-    </div>
-
-    <!-- // ADD THIS: "Create Account" link shown on login step -->
-    <div id="signup-link-row" style="text-align:center;margin-top:16px;">
-      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">No account? </span>
-      <button onclick="openSignup()" style="background:none;border:none;color:var(--accent2);font-family:var(--font-mono);font-size:10px;cursor:pointer;text-decoration:underline;">Create Account</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     DASHBOARD SCREEN
+     DASHBOARD — loads directly, no auth gate
 ════════════════════════════════════════════════════════════ -->
 <div id="dashboard-screen">
 <div class="page">
@@ -830,9 +667,6 @@ textarea.field-input { min-height:100px; resize:vertical; font-family:var(--font
   <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:16px 0;border-top:1px solid var(--border);margin-top:8px;">
     ✦ More features coming soon…
   </div>
-
-  <!-- Logout -->
-  <button class="btn-danger" onclick="doLogout()">🚪 Logout</button>
 </div>
 
 <!-- ═══ ADD ROOM MODAL ═══════════════════════════════════════ -->
@@ -937,147 +771,8 @@ textarea.field-input { min-height:100px; resize:vertical; font-family:var(--font
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 /* ════════════════════════════════════════════════════════════════
-   AUTH — LOGIN SYSTEM
+   NO AUTH — dashboard is public, loads directly on page open
 ════════════════════════════════════════════════════════════════ */
-const DEMO_EMAIL    = "admin@gridsense.io";
-const DEMO_PASS     = "gridsense123";
-let   _otpCode      = "";
-let   _resendTimer  = null;
-let   _currentEmail = "";
-let   _pendingSignup = false; // true when OTP was triggered by signup flow
-
-// // ADD THIS: Signup helpers
-function openSignup() {
-  document.getElementById('step-login').style.display   = 'none';
-  document.getElementById('step-verify').style.display  = 'none';
-  document.getElementById('step-signup').style.display  = 'block';
-  document.getElementById('signup-link-row').style.display = 'none';
-  document.getElementById('signup-error').classList.remove('show');
-}
-
-function doSignup() {
-  const email = document.getElementById('signup-email').value.trim();
-  const pass  = document.getElementById('signup-pass').value;
-  const err   = document.getElementById('signup-error');
-  err.classList.remove('show');
-  if (!email || !pass) { err.textContent = "Please fill in both fields."; err.classList.add('show'); return; }
-  if (pass.length < 6)  { err.textContent = "Password must be at least 6 characters."; err.classList.add('show'); return; }
-  // Save credentials to localStorage
-  localStorage.setItem('gs_user_email', email);
-  localStorage.setItem('gs_user_pass',  pass);
-  // Generate & "send" OTP
-  _currentEmail   = email;
-  _pendingSignup  = true;
-  _otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log(`[GridSense] Signup OTP for ${email}: ${_otpCode}`);
-  // Show OTP verify screen
-  document.getElementById('signup-email').value = '';
-  document.getElementById('signup-pass').value  = '';
-  document.getElementById('step-signup').style.display  = 'none';
-  document.getElementById('step-verify').style.display  = 'block';
-  document.getElementById('verify-email-label').textContent = email;
-  startResendTimer();
-  setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
-}
-
-// // REPLACE THIS: doLogin — now checks localStorage first, falls back to demo
-function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-pass').value;
-  const err   = document.getElementById('login-error');
-  err.classList.remove('show');
-  if (!email || !pass) { err.textContent = "Please fill in both fields."; err.classList.add('show'); return; }
-  const storedEmail = localStorage.getItem('gs_user_email');
-  const storedPass  = localStorage.getItem('gs_user_pass');
-  const validUser   = storedEmail && storedPass
-    ? (email === storedEmail && pass === storedPass)
-    : (email === DEMO_EMAIL  && pass === DEMO_PASS);
-  if (!validUser) { err.textContent = "Invalid email or password."; err.classList.add('show'); return; }
-  _currentEmail  = email;
-  _pendingSignup = false;
-  _otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log(`[GridSense] OTP for ${email}: ${_otpCode}`);
-  document.getElementById('verify-email-label').textContent = email;
-  document.getElementById('signup-link-row').style.display = 'none';
-  document.getElementById('step-login').style.display  = 'none';
-  document.getElementById('step-verify').style.display = 'block';
-  startResendTimer();
-  setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
-}
-
-// OTP digit auto-advance
-document.querySelectorAll('.otp-digit').forEach((inp, idx, all) => {
-  inp.addEventListener('input', () => {
-    inp.value = inp.value.replace(/\D/g,'').slice(0,1);
-    if (inp.value && idx < all.length - 1) all[idx+1].focus();
-  });
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Backspace' && !inp.value && idx > 0) all[idx-1].focus();
-    if (e.key === 'Enter') doVerify();
-  });
-});
-
-function doVerify() {
-  const entered = [...document.querySelectorAll('.otp-digit')].map(i => i.value).join('');
-  const err = document.getElementById('verify-error');
-  err.classList.remove('show');
-  if (entered.length < 6) { err.textContent = "Enter all 6 digits."; err.classList.add('show'); return; }
-  if (entered !== _otpCode) { err.textContent = "Incorrect code. Try again."; err.classList.add('show'); return; }
-  openDashboard();
-}
-
-function resendOTP() {
-  _otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log(`[GridSense] New OTP: ${_otpCode}`);
-  document.querySelectorAll('.otp-digit').forEach(i => i.value = '');
-  document.getElementById('verify-error').classList.remove('show');
-  startResendTimer();
-  document.querySelector('.otp-digit').focus();
-}
-
-function startResendTimer() {
-  const btn = document.getElementById('resend-btn');
-  const lbl = document.getElementById('resend-timer');
-  btn.classList.remove('ready');
-  let sec = 30;
-  lbl.textContent = ` (${sec}s)`;
-  clearInterval(_resendTimer);
-  _resendTimer = setInterval(() => {
-    sec--;
-    lbl.textContent = ` (${sec}s)`;
-    if (sec <= 0) { clearInterval(_resendTimer); btn.classList.add('ready'); lbl.textContent = ''; }
-  }, 1000);
-}
-
-// // REPLACE THIS: backToLogin — restore signup-link-row and handle signup flow
-function backToLogin() {
-  document.getElementById('step-verify').style.display  = 'none';
-  document.getElementById('step-signup').style.display  = 'none';
-  document.getElementById('step-login').style.display   = 'block';
-  document.getElementById('signup-link-row').style.display = 'block';
-  _pendingSignup = false;
-  clearInterval(_resendTimer);
-}
-
-function openDashboard() {
-  document.getElementById('login-screen').classList.remove('active');
-  document.getElementById('dashboard-screen').classList.add('active');
-  initDashboard();
-}
-
-function doLogout() {
-  closeSettings();
-  document.getElementById('dashboard-screen').classList.remove('active');
-  document.getElementById('login-screen').classList.add('active');
-  document.getElementById('step-verify').style.display  = 'none';
-  document.getElementById('step-signup').style.display  = 'none';
-  document.getElementById('step-login').style.display   = 'block';
-  document.getElementById('signup-link-row').style.display = 'block';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-pass').value = '';
-  _pendingSignup = false;
-  stopSimulation();
-}
 
 /* ════════════════════════════════════════════════════════════════
    CONFIGURATION
@@ -1129,8 +824,9 @@ let lineChart, donutChart, barChart;
 let hourlyBuckets   = {};   // { "HH": { totalW: 0, count: 0, cost: 0 } }
 let currentHourKey  = "";
 let lastHourlyUpdate = 0;   // timestamp of last hourly KPI update
-let monthlykWh      = 0;    // accumulated kWh this session (proxy for monthly)
-let lastReadingTime = null; // for energy accumulation
+let monthlykWh      = 0;    // accumulated kWh this session
+let lastReadingTime  = null; // unix seconds of last reading
+let sessionStartTime = null; // unix seconds of very first reading (for monthly projection)
 
 // Room data for detail modal
 let _activeRoomKey = "";
@@ -1184,8 +880,21 @@ function calculateMonthlyBill(units) {
 }
 
 function updateCESCPanel() {
-  const { bill, slab, rate } = calculateMonthlyBill(monthlykWh);
-  setText('cesc-units', `${monthlykWh.toFixed(3)}<span class="unit"> kWh</span>`);
+  /* Project session kWh → monthly kWh using real elapsed time:
+     monthly_kWh = (session_kWh / elapsed_seconds) × (30 × 24 × 3600)
+     This uses ONLY the simulated total power — no random data. */
+  const MONTH_SEC = 30 * 24 * 3600;
+  let displayKwh = monthlykWh; // fallback: show raw session value
+
+  if (sessionStartTime !== null && lastReadingTime !== null && monthlykWh > 0) {
+    const elapsedSec = lastReadingTime - sessionStartTime;
+    if (elapsedSec > 0) {
+      displayKwh = (monthlykWh / elapsedSec) * MONTH_SEC;
+    }
+  }
+
+  const { bill, slab, rate } = calculateMonthlyBill(displayKwh);
+  setText('cesc-units', `${displayKwh.toFixed(2)}<span class="unit"> kWh</span>`);
   setText('cesc-bill',  `₹${bill.toFixed(2)}`);
   setText('cesc-slab',  slab || "—");
   setText('cesc-rate',  rate ? `${rate}<span class="unit"> ₹/unit</span>` : "—");
@@ -1257,11 +966,14 @@ function getHourKey(ts) {
 function accumulateHourly(snap) {
   const hKey = getHourKey(snap.timestamp);
 
-  // Energy accumulation: power × time elapsed
+  // Energy accumulation: power(W) × elapsed_time(hours) / 1000 = kWh
   if (lastReadingTime !== null) {
     const elapsedHours = (snap.timestamp - lastReadingTime) / 3600;
     const kwhIncrement = (snap.total / 1000) * elapsedHours;
     monthlykWh += kwhIncrement;
+  } else {
+    // First reading — record session start for monthly projection
+    sessionStartTime = snap.timestamp;
   }
   lastReadingTime = snap.timestamp;
 
@@ -1633,7 +1345,7 @@ function generateDummyPayload() {
 
 function startSimulation() {
   if (simInterval) return;
-  isSimulating = true; budgetUsed = 0; budgetAlertFired = false; monthlykWh = 0; lastReadingTime = null;
+  isSimulating = true; budgetUsed = 0; budgetAlertFired = false; monthlykWh = 0; lastReadingTime = null; sessionStartTime = null;
   prevDay = Array.from({length:8}, () => 150 + Math.round(Math.random()*100));
   // // ADD THIS: reset global ts buffers on new simulation
   tsSecBuf = []; tsMinBuf = []; tsHrBuf = [];
@@ -1691,12 +1403,16 @@ function renderHistoryTable(rows) {
   ).join('');
 }
 function getDummyHistory() {
+  /* Fixed representative daily consumption values — no random data.
+     Bill calculated via real CESC slab function from the same pipeline. */
+  const DAILY_KWH = [3.2, 4.1, 2.8, 5.0, 3.6, 4.4, 3.9];
   const out = {};
-  for (let i=1;i<=7;i++) {
-    const d = new Date(Date.now() - i*86400000);
+  for (let i = 1; i <= 7; i++) {
+    const d   = new Date(Date.now() - i * 86400000);
     const key = d.toISOString().split('T')[0];
-    const u = (2 + Math.random()*4).toFixed(2);
-    out[key] = { units:u, cost:(u*calculateMonthlyBill(parseFloat(u)).bill/parseFloat(u)||7).toFixed(1) };
+    const u   = DAILY_KWH[i - 1];
+    const { bill } = calculateMonthlyBill(u);
+    out[key] = { units: u.toFixed(2), cost: bill.toFixed(1) };
   }
   return out;
 }
@@ -1711,14 +1427,9 @@ function toggleTheme(cb) {
   document.body.classList.toggle('light', !cb.checked);
 }
 
-// // REPLACE THIS: saveCredentials — now persists to localStorage
 function saveCredentials() {
-  const email = document.getElementById('settings-email').value.trim();
-  const pass  = document.getElementById('settings-pass').value;
-  if (!email && !pass) { showAlert('⚠ Enter a new email or password to update.'); return; }
-  if (email) localStorage.setItem('gs_user_email', email);
-  if (pass)  localStorage.setItem('gs_user_pass',  pass);
-  showAlert('✅ Credentials updated and saved.');
+  // Auth system removed — this panel is kept for UI completeness only
+  showAlert('ℹ Auth is disabled in this build. Credentials are not saved.');
   document.getElementById('settings-email').value = '';
   document.getElementById('settings-pass').value  = '';
 }
@@ -2042,11 +1753,13 @@ function updateScaleLabels() {
 ════════════════════════════════════════════════════════════════ */
 function initDashboard() {
   setupCharts();
-  loadBudgetSettingsUI(); // // ADD THIS: load saved budget into settings panel
+  loadBudgetSettingsUI();
   prevDay = Array.from({length:8}, () => 150 + Math.round(Math.random()*100));
-  // // ADD THIS: apply default scale labels on dashboard init
   updateScaleLabels();
 }
+
+// Auto-initialise on page load — no auth gate
+initDashboard();
 </script>
 </body>
 </html>
