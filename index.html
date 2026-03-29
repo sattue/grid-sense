@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GridSense — Smart Energy Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID", storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID"
+  };
+  try {
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    window._firebaseDB = db; window._firebaseRef = ref;
+    window._firebaseOnValue = onValue; window._firebaseSet = set;
+    window.dispatchEvent(new Event("firebase-ready"));
+  } catch(e) {
+    console.warn("Firebase not configured — simulation mode.", e);
+    window.dispatchEvent(new Event("firebase-error"));
+  }
+</script>
+
+<style>
+/* ── DESIGN TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg:        #0a0d12;
+  --surface:   #111620;
+  --surface2:  #171e2b;
+  --border:    #1e2a3a;
+  --accent:    #00e5a0;
+  --accent2:   #0090ff;
+  --warn:      #ff6b35;
+  --gold:      #f5c518;
+  --text:      #e8edf5;
+  --muted:     #6b7a90;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --radius:    12px;
+  --card-pad:  24px;
+}
+/* LIGHT THEME */
+body.light {
+  --bg:      #f0f4f8;
+  --surface: #ffffff;
+  --surface2:#e8edf5;
+  --border:  #d0d8e4;
+  --text:    #1a2233;
+  --muted:   #6b7a90;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-head); min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 10% 10%, rgba(0,229,160,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 90% 80%, rgba(0,144,255,0.06) 0%, transparent 60%);
+}
+
+/* ── SCREENS ─────────────────────────────────────────────────── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── LOGIN PAGE ──────────────────────────────────────────────── */
+#login-screen {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+#login-screen.active { display: flex; }
+
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 40px 40px;
+  width: 400px;
+  max-width: 92vw;
+  position: relative;
+  box-shadow: 0 32px 80px rgba(92, 32, 32, 0.5);
+}
+.login-box::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 20px 20px 0 0;
+}
+.login-logo { text-align:center; margin-bottom:32px; }
+.login-logo .logo-icon {
+  width:56px; height:56px; border-radius:14px; margin:0 auto 12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex; align-items:center; justify-content:center; font-size:26px;
+}
+.login-logo .logo-name { font-size:26px; font-weight:800; letter-spacing:-0.5px; }
+.login-logo .logo-name span { color:var(--accent); }
+.login-logo p { font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-top:4px; }
+
+.form-label {
+  font-family:var(--font-mono); font-size:10px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;
+}
+.form-input {
+  width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:11px 14px; color:var(--text); font-family:var(--font-mono); font-size:12px;
+  outline:none; margin-bottom:16px; transition:border-color 0.2s;
+}
+.form-input:focus { border-color: var(--accent2); }
+.form-input::placeholder { color: var(--muted); }
+
+.btn-primary {
+  width:100%; background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none; border-radius:8px; padding:13px; color:#0a0d12;
+  font-family:var(--font-head); font-size:14px; font-weight:800;
+  cursor:pointer; transition:opacity 0.2s; margin-top:4px;
+}
+.btn-primary:hover { opacity:0.88; }
+.btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+
+.form-error {
+  font-family:var(--font-mono); font-size:11px; color:var(--warn);
+  margin-bottom:12px; display:none; padding:8px 12px;
+  background:rgba(255,107,53,0.1); border-radius:6px; border:1px solid rgba(255,107,53,0.3);
+}
+.form-error.show { display:block; }
+
+/* Verify screen */
+.otp-inputs { display:flex; gap:8px; justify-content:center; margin:20px 0; }
+.otp-digit {
+  width:44px; height:52px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font-mono); font-size:20px;
+  font-weight:700; text-align:center; outline:none; transition:border-color 0.2s;
+}
+.otp-digit:focus { border-color:var(--accent2); }
+.resend-btn {
+  background:none; border:none; color:var(--accent2); font-family:var(--font-mono);
+  font-size:11px; cursor:pointer; opacity:0.5; pointer-events:none; transition:opacity 0.2s;
+}
+.resend-btn.ready { opacity:1; pointer-events:all; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────── */
+#dashboard-screen { display:none; }
+#dashboard-screen.active { display:block; }
+.page {
+  position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:32px 20px 60px;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────── */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:40px; flex-wrap:wrap; gap:12px;
+}
+.logo { display:flex; align-items:center; gap:12px; }
+.logo-icon {
+  width:40px; height:40px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px;
+}
+.logo-text { font-size:22px; font-weight:800; letter-spacing:-0.5px; }
+.logo-text span { color:var(--accent); }
+.header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+.status-pill {
+  display:flex; align-items:center; gap:8px;
+  background:var(--surface); border:1px solid var(--border); border-radius:100px;
+  padding:6px 14px; font-family:var(--font-mono); font-size:12px; color:var(--muted);
+}
+.status-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--muted); animation:pulse 2s infinite;
+}
+.status-dot.live { background:var(--accent); }
+.status-dot.demo { background:var(--accent2); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.sim-btn {
+  background:transparent; border:1px solid var(--border); color:var(--muted);
+  font-family:var(--font-mono); font-size:11px; padding:6px 14px;
+  border-radius:100px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+}
+.sim-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+.sim-btn.active { border-color:var(--accent2); color:var(--accent2); background:rgba(0,144,255,0.08); }
+.sim-btn.event-on { border-color:var(--gold); color:var(--gold); background:rgba(245,197,24,0.08); }
+
+/* Settings icon button */
+.icon-btn {
+  width:36px; height:36px; background:var(--surface); border:1px solid var(--border);
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:16px; transition:all 0.2s; color:var(--muted);
+}
+.icon-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+
+/* ── ALERT BANNER ────────────────────────────────────────────── */
+#alert-banner {
+  display:none; align-items:flex-start; gap:12px;
+  background:rgba(255,107,53,0.1); border:1px solid rgba(255,107,53,0.4);
+  border-radius:var(--radius); padding:14px 20px; margin-bottom:28px;
+  font-size:14px; color:var(--warn);
+}
+#alert-banner.show { display:flex; }
+.alert-close {
+  margin-left:auto; background:none; border:none; color:var(--warn);
+  cursor:pointer; font-size:18px; opacity:0.7; flex-shrink:0;
+}
+.alert-close:hover { opacity:1; }
+@keyframes slideDown { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+/* ── KPI ─────────────────────────────────────────────────────── */
+.kpi-row {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:16px; margin-bottom:28px;
+}
+.kpi-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:var(--card-pad);
+  position:relative; overflow:hidden; transition:border-color 0.3s;
+}
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--accent);
+}
+.kpi-card.blue::before { background:var(--accent2); }
+.kpi-card.warn::before { background:var(--warn); }
+.kpi-card.gold::before { background:var(--gold); }
+.kpi-card:hover { border-color:rgba(0,229,160,0.25); }
+.kpi-label {
+  font-family:var(--font-mono); font-size:11px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;
+}
+.kpi-value {
+  font-size:36px; font-weight:800; letter-spacing:-2px; line-height:1;
+  color:var(--text); transition:color 0.4s;
+}
+.kpi-value .unit { font-size:16px; font-weight:400; color:var(--muted); letter-spacing:0; }
+.kpi-sub { margin-top:10px; font-family:var(--font-mono); font-size:11px; color:var(--muted); }
+.kpi-update-badge {
+  display:inline-block; font-family:var(--font-mono); font-size:9px;
+  color:var(--muted); opacity:0.6; margin-top:4px;
+}
+
+/* ── GRID ────────────────────────────────────────────────────── */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px; }
+@media(max-width:768px){.two-col{grid-template-columns:1fr}}
+
+.chart-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:var(--card-pad);
+}
+.card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px; flex-wrap:wrap; gap:8px;
+}
+.card-title { font-size:14px; font-weight:700; letter-spacing:0.3px; color:var(--text); }
+.card-badge {
+  font-family:var(--font-mono); font-size:10px; color:var(--muted);
+  background:var(--surface2); padding:3px 10px; border-radius:100px; border:1px solid var(--border);
+}
+canvas { max-height:220px; }
+
+/* ── BUDGET BAR ──────────────────────────────────────────────── */
+.budget-bar-track { height:6px; background:var(--border); border-radius:3px; margin-top:10px; overflow:hidden; }
+.budget-bar-fill { height:100%; border-radius:3px; background:var(--accent); transition:width 0.6s ease, background 0.3s; }
+
+/* ── CESC PANEL ──────────────────────────────────────────────── */
+.cesc-panel {
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;
+}
+.cesc-stat {
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+}
+.cesc-stat-label { font-family:var(--font-mono); font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.cesc-stat-val { font-size:20px; font-weight:800; letter-spacing:-1px; color:var(--text); }
+.cesc-stat-val .unit { font-size:11px; font-weight:400; color:var(--muted); }
+
+/* ── ROOMS ───────────────────────────────────────────────────── */
+.rooms-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+.room-card {
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:16px; cursor:pointer; transition:border-color 0.2s, transform 0.2s; user-select:none;
+  position:relative;
+}
+.room-card:hover { border-color:var(--accent2); transform:translateY(-2px); }
+.room-card:active { transform:translateY(0); }
+.room-remove-btn {
+  position:absolute; top:8px; right:8px; background:none; border:none;
+  color:var(--muted); cursor:pointer; font-size:13px; opacity:0; transition:opacity 0.2s;
+  padding:2px 5px; border-radius:4px;
+}
+.room-card:hover .room-remove-btn { opacity:1; }
+.room-remove-btn:hover { color:var(--warn); background:rgba(255,107,53,0.1); }
+.room-icon { font-size:22px; margin-bottom:10px; }
+.room-name { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.room-watts { font-size:22px; font-weight:800; letter-spacing:-1px; color:var(--text); }
+.room-watts span { font-size:12px; font-weight:400; color:var(--muted); }
+.room-bar-track { margin-top:10px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.room-bar-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width 0.6s ease; }
+
+/* ── COMPARISON ──────────────────────────────────────────────── */
+.compare-list { list-style:none; display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; }
+.compare-row { display:flex; align-items:center; font-size:13px; gap:4px; }
+.compare-label { color:var(--muted); font-family:var(--font-mono); font-size:10px; min-width:60px; }
+.compare-bar-wrap { flex:1; margin:0 10px; height:4px; background:var(--border); border-radius:2px; }
+.compare-bar { height:100%; border-radius:2px; background:var(--accent); transition:width 0.6s ease; }
+.compare-val { font-family:var(--font-mono); font-size:11px; color:var(--text); min-width:46px; text-align:right; }
+
+/* ── HISTORY TABLE ───────────────────────────────────────────── */
+#history-table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:12px; }
+#history-table thead tr { border-bottom:1px solid var(--border); }
+#history-table th { padding:8px 14px; color:var(--muted); font-weight:400; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:1px; }
+#history-table td { padding:11px 14px; border-bottom:1px solid rgba(30,42,58,0.6); }
+#history-table tbody tr:last-child td { border-bottom:none; }
+#history-table tbody tr:hover { background:var(--surface2); }
+.hist-units { color:var(--accent); font-weight:700; }
+.hist-cost  { color:var(--accent2); font-weight:700; }
+.hist-note { margin-top:12px; font-family:var(--font-mono); font-size:10px; color:var(--muted); opacity:0.7; }
+
+/* ── FOOTER ──────────────────────────────────────────────────── */
+.last-updated { text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--muted); margin-top:32px; padding-top:20px; border-top:1px solid var(--border); }
+
+/* ── SCROLLBAR ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* ── MODAL BASE ──────────────────────────────────────────────── */
+.modal-overlay {
+  display:none; position:fixed; inset:0; z-index:900;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+  align-items:center; justify-content:center; padding:20px;
+}
+.modal-overlay.open { display:flex; }
+.modal-box {
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:32px; width:420px; max-width:100%; position:relative;
+  box-shadow:0 32px 80px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;
+}
+.modal-box::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:16px 16px 0 0;
+}
+.modal-title { font-size:18px; font-weight:800; color:var(--text); margin-bottom:4px; }
+.modal-sub { font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-bottom:24px; }
+.modal-close-btn {
+  position:absolute; top:16px; right:16px; background:none; border:none;
+  color:var(--muted); font-size:20px; cursor:pointer; padding:4px;
+  border-radius:6px; transition:color 0.2s;
+}
+.modal-close-btn:hover { color:var(--warn); }
+
+.field-group { margin-bottom:16px; }
+.field-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px; }
+.field-input {
+  width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:10px 14px; color:var(--text); font-family:var(--font-mono); font-size:12px;
+  outline:none; transition:border-color 0.2s;
+}
+.field-input:focus { border-color:var(--accent2); }
+.field-input::placeholder { color:var(--muted); }
+select.field-input { cursor:pointer; }
+
+.btn-row { display:flex; gap:10px; margin-top:20px; }
+.btn-accent {
+  flex:1; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none;
+  border-radius:8px; padding:11px; color:#0a0d12; font-family:var(--font-head);
+  font-size:13px; font-weight:800; cursor:pointer; transition:opacity 0.2s;
+}
+.btn-accent:hover { opacity:0.85; }
+.btn-ghost {
+  flex:1; background:transparent; border:1px solid var(--border); border-radius:8px;
+  padding:11px; color:var(--muted); font-family:var(--font-head); font-size:13px;
+  cursor:pointer; transition:all 0.2s;
+}
+.btn-ghost:hover { border-color:var(--muted); color:var(--text); }
+.btn-danger {
+  width:100%; background:rgba(255,107,53,0.1); border:1px solid rgba(255,107,53,0.4);
+  border-radius:8px; padding:11px; color:var(--warn); font-family:var(--font-head);
+  font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; margin-top:8px;
+}
+.btn-danger:hover { background:rgba(255,107,53,0.2); }
+
+/* ── SETTINGS PANEL ──────────────────────────────────────────── */
+#settings-panel {
+  position:fixed; top:0; right:-400px; width:360px; height:100vh; z-index:800;
+  background:var(--surface); border-left:1px solid var(--border);
+  transition:right 0.3s ease; overflow-y:auto;
+  box-shadow:-8px 0 32px rgba(0,0,0,0.4); padding:32px 24px;
+}
+#settings-panel.open { right:0; }
+.settings-section { margin-bottom:28px; }
+.settings-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; display:block; }
+.toggle-row {
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px;
+}
+.toggle-label { font-size:13px; color:var(--text); }
+.toggle-switch { position:relative; width:44px; height:24px; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.toggle-track {
+  position:absolute; inset:0; background:var(--border); border-radius:12px; cursor:pointer; transition:0.3s;
+}
+.toggle-track::after {
+  content:''; position:absolute; width:18px; height:18px; border-radius:50%;
+  background:white; top:3px; left:3px; transition:0.3s;
+}
+.toggle-switch input:checked + .toggle-track { background:var(--accent2); }
+.toggle-switch input:checked + .toggle-track::after { left:23px; }
+
+.contact-row {
+  display:flex; align-items:center; gap:10px; padding:10px 0;
+  border-bottom:1px solid var(--border); font-family:var(--font-mono); font-size:11px; color:var(--muted);
+}
+.contact-row span { color:var(--text); }
+
+/* ── ROOM DETAIL MODAL extras ────────────────────────────────── */
+.room-detail-header {
+  display:flex; align-items:center; gap:14px; margin-bottom:24px;
+}
+.room-detail-icon { font-size:36px; }
+.room-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0; }
+.room-stat-box {
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+}
+.room-stat-box-label { font-family:var(--font-mono); font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.room-stat-box-val { font-size:18px; font-weight:800; color:var(--text); }
+.room-stat-box-val .unit { font-size:11px; font-weight:400; color:var(--muted); }
+
+/* ── COMPLAINTS TEXTAREA ─────────────────────────────────────── */
+textarea.field-input { min-height:100px; resize:vertical; font-family:var(--font-mono); line-height:1.5; }
+
+/* // ADD THIS: Power Graph Modal */
+#power-graph-modal .modal-box {
+  width: 720px;
+  max-width: 96vw;
+}
+.pgraph-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px; flex-wrap: wrap; gap: 8px;
+}
+.pgraph-title { font-size: 16px; font-weight: 800; color: var(--text); }
+.pgraph-live-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--accent);
+}
+.pgraph-live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: pulse 1.5s infinite;
+}
+.pgraph-toggles {
+  display: flex; gap: 6px; margin-bottom: 18px;
+}
+.pgraph-toggle-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); font-family: var(--font-mono); font-size: 10px;
+  padding: 5px 14px; border-radius: 100px; cursor: pointer;
+  transition: all 0.2s; letter-spacing: 0.5px;
+}
+.pgraph-toggle-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+.pgraph-toggle-btn.active {
+  background: rgba(0,229,160,0.12); border-color: var(--accent);
+  color: var(--accent);
+}
+.pgraph-stats {
+  display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap;
+}
+.pgraph-stat {
+  font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+}
+.pgraph-stat span { color: var(--text); font-weight: 700; }
+#power-graph-canvas { max-height: 280px; }
+
+/* // ADD THIS: Global time-scale toggle */
+.global-ts-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 100px; padding: 4px 6px;
+}
+.global-ts-label {
+  font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px; padding: 0 6px; white-space: nowrap;
+}
+.global-ts-btn {
+  background: transparent; border: 1px solid transparent;
+  color: var(--muted); font-family: var(--font-mono); font-size: 10px;
+  padding: 4px 12px; border-radius: 100px; cursor: pointer;
+  transition: all 0.18s; letter-spacing: 0.4px; white-space: nowrap;
+}
+.global-ts-btn:hover { color: var(--accent2); border-color: var(--accent2); }
+.global-ts-btn.active {
+  background: rgba(0,229,160,0.13); border-color: var(--accent);
+  color: var(--accent); font-weight: 700;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="active">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-name">Grid<span>Sense</span></div>
+      <p>Smart Energy Monitoring System</p>
+    </div>
+
+    <!-- Step 1: Email + Password -->
+    <div id="step-login">
+      <div class="form-error" id="login-error"></div>
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="you@example.com" />
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-pass" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')doLogin()" />
+      <button class="btn-primary" onclick="doLogin()">Login →</button>
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-top:16px;">
+        Demo credentials: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="741510191d1a3413061d1007111a07115a1d1b">[email&#160;protected]</a> / gridsense123
+      </p>
+    </div>
+
+    <!-- Step 2: OTP Verify -->
+    <div id="step-verify" style="display:none;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-size:28px;">📧</div>
+        <div style="font-weight:700;margin:8px 0 4px;">Check your email</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">
+          A 6-digit code was sent to <span id="verify-email-label"></span>
+        </div>
+      </div>
+      <div class="form-error" id="verify-error"></div>
+      <div class="otp-inputs" id="otp-inputs">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" />
+      </div>
+      <button class="btn-primary" onclick="doVerify()">Verify Code →</button>
+      <div style="text-align:center;margin-top:14px;">
+        <button class="resend-btn" id="resend-btn" onclick="resendOTP()">Resend code</button>
+        <span id="resend-timer" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);"></span>
+      </div>
+      <div style="text-align:center;margin-top:16px;">
+        <button onclick="backToLogin()" style="background:none;border:none;color:var(--muted);font-family:var(--font-mono);font-size:10px;cursor:pointer;">← Back to login</button>
+      </div>
+    </div>
+
+    <!-- // ADD THIS: Signup Form -->
+    <div id="step-signup" style="display:none;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:24px;">✨</div>
+        <div style="font-weight:700;margin:8px 0 4px;">Create Account</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Sign up for GridSense</div>
+      </div>
+      <div class="form-error" id="signup-error"></div>
+      <label class="form-label">Email</label>
+      <input class="form-input" id="signup-email" type="email" placeholder="you@example.com" />
+      <label class="form-label">Password</label>
+      <input class="form-input" id="signup-pass" type="password" placeholder="Min. 6 characters"
+        onkeydown="if(event.key==='Enter')doSignup()" />
+      <button class="btn-primary" onclick="doSignup()">Create Account →</button>
+      <div style="text-align:center;margin-top:14px;">
+        <button onclick="backToLogin()" style="background:none;border:none;color:var(--muted);font-family:var(--font-mono);font-size:10px;cursor:pointer;">← Back to login</button>
+      </div>
+    </div>
+
+    <!-- // ADD THIS: "Create Account" link shown on login step -->
+    <div id="signup-link-row" style="text-align:center;margin-top:16px;">
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">No account? </span>
+      <button onclick="openSignup()" style="background:none;border:none;color:var(--accent2);font-family:var(--font-mono);font-size:10px;cursor:pointer;text-decoration:underline;">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DASHBOARD SCREEN
+════════════════════════════════════════════════════════════ -->
+<div id="dashboard-screen">
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Grid<span>Sense</span></div>
+    </div>
+    <div class="header-right">
+      <!-- // ADD THIS: Global time-scale toggle -->
+      <div class="global-ts-bar">
+        <span class="global-ts-label">Scale</span>
+        <button class="global-ts-btn active" id="gts-seconds" onclick="setGlobalTimeScale('seconds')">Seconds</button>
+        <button class="global-ts-btn"        id="gts-minutes" onclick="setGlobalTimeScale('minutes')">Minutes</button>
+        <button class="global-ts-btn"        id="gts-hours"   onclick="setGlobalTimeScale('hours')">Hours</button>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+      </div>
+      <button class="sim-btn" id="event-toggle">⚑ Event: OFF</button>
+      <button class="sim-btn" id="sim-toggle">⟳ Simulate</button>
+      <div class="icon-btn" onclick="openSettings()" title="Settings">⚙</div>
+    </div>
+  </header>
+
+  <!-- ALERT BANNER -->
+  <div id="alert-banner">
+    <span>⚠️</span>
+    <div id="alert-msg" style="flex:1;line-height:1.5;"></div>
+    <button class="alert-close" onclick="closeAlert()">✕</button>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-row">
+    <!-- // MODIFY THIS: added onclick + cursor/title for power graph -->
+    <div class="kpi-card" onclick="openPowerGraph()" style="cursor:pointer;" title="Click to view real-time graph">
+      <div class="kpi-label">Total Power <span style="font-size:9px;color:var(--accent);">● 10s</span> <span style="font-size:9px;color:var(--muted);opacity:0.6;">↗ graph</span></div>
+      <div class="kpi-value" id="kpi-total">—<span class="unit"> W</span></div>
+      <div class="kpi-sub">Live consumption</div>
+    </div>
+    <div class="kpi-card blue">
+      <!-- // MODIFY THIS: dynamic time-scale badge -->
+      <div class="kpi-label">Daily Cost <span id="kpi-cost-scale-badge" style="font-size:9px;color:var(--muted);">⏱ hourly</span></div>
+      <div class="kpi-value" id="kpi-cost">—<span class="unit"> ₹</span></div>
+      <div class="kpi-sub" id="kpi-cost-sub">Estimated today</div>
+    </div>
+    <div class="kpi-card">
+      <!-- // MODIFY THIS: dynamic time-scale badge -->
+      <div class="kpi-label">vs Yesterday <span id="kpi-delta-scale-badge" style="font-size:9px;color:var(--muted);">⏱ hourly</span></div>
+      <div class="kpi-value" id="kpi-delta">—<span class="unit"> %</span></div>
+      <div class="kpi-sub" id="kpi-delta-sub">Comparison</div>
+    </div>
+    <div class="kpi-card gold">
+      <!-- // MODIFY THIS: dynamic time-scale badge -->
+      <div class="kpi-label">Daily Budget <span id="kpi-budget-scale-badge" style="font-size:9px;color:var(--muted);">⏱ hourly</span></div>
+      <div class="kpi-value" id="kpi-budget">0<span class="unit"> %</span></div>
+      <div class="kpi-sub" id="kpi-budget-sub">of ₹50 used today</div>
+      <div class="budget-bar-track">
+        <div class="budget-bar-fill" id="budget-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="kpi-card warn">
+      <!-- // MODIFY THIS: dynamic time-scale badge -->
+      <div class="kpi-label">Peak Today <span id="kpi-peak-scale-badge" style="font-size:9px;color:var(--muted);">⏱ hourly</span></div>
+      <div class="kpi-value" id="kpi-peak">—<span class="unit"> W</span></div>
+      <div class="kpi-sub" id="kpi-peak-time">—</div>
+    </div>
+  </div>
+
+  <!-- CESC TARIFF PANEL -->
+  <div class="chart-card" style="margin-bottom:28px;">
+    <div class="card-header">
+      <div class="card-title">CESC Monthly Bill Estimate</div>
+      <div class="card-badge">Slab-based tariff</div>
+    </div>
+    <div class="cesc-panel">
+      <div class="cesc-stat">
+        <div class="cesc-stat-label">Monthly Units Used</div>
+        <div class="cesc-stat-val" id="cesc-units">0.00<span class="unit"> kWh</span></div>
+      </div>
+      <div class="cesc-stat">
+        <div class="cesc-stat-label">Estimated Bill</div>
+        <div class="cesc-stat-val" id="cesc-bill">₹0.00</div>
+      </div>
+      <div class="cesc-stat">
+        <div class="cesc-stat-label">Current Slab</div>
+        <div class="cesc-stat-val" id="cesc-slab" style="font-size:13px;letter-spacing:0;">—</div>
+      </div>
+      <div class="cesc-stat">
+        <div class="cesc-stat-label">Rate Applied</div>
+        <div class="cesc-stat-val" id="cesc-rate">—<span class="unit"> ₹/unit</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINE CHART + COMPARISON -->
+  <div class="two-col" style="grid-template-columns:2fr 1fr;">
+    <div class="chart-card">
+      <div class="card-header">
+        <!-- // MODIFY THIS: dynamic title + badge driven by global time scale -->
+        <div class="card-title" id="lineChart-title">Energy Usage Over Time</div>
+        <div class="card-badge" id="chart-badge">Hourly averages</div>
+      </div>
+      <canvas id="lineChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-header">
+        <!-- // MODIFY THIS: dynamic comparison title -->
+        <div class="card-title" id="compare-title">Today vs Yesterday</div>
+        <div class="card-badge" id="compare-badge">Per room</div>
+      </div>
+      <ul class="compare-list" id="compare-list">
+        <li class="compare-row"><span class="compare-label" style="color:var(--muted);">Loading…</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ROOM CARDS -->
+  <div class="chart-card" style="margin-bottom:28px;">
+    <div class="card-header">
+      <div class="card-title">Room-wise Consumption</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="sim-btn" onclick="openAddRoomModal()" style="border-color:var(--accent);color:var(--accent);">+ Add Room</button>
+        <div class="card-badge" id="rooms-total-badge">Total: — W</div>
+      </div>
+    </div>
+    <div class="rooms-grid" id="rooms-grid"></div>
+  </div>
+
+  <!-- DONUT + BAR -->
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="card-header">
+        <div class="card-title">Room Share</div>
+        <div class="card-badge">Distribution</div>
+      </div>
+      <canvas id="donutChart" style="max-height:200px;"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-header">
+        <!-- // MODIFY THIS: dynamic cost trend title + badge -->
+        <div class="card-title" id="barChart-title">Hourly Cost Trend</div>
+        <div class="card-badge" id="barChart-badge">₹ / hour</div>
+      </div>
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 7-DAY HISTORY -->
+  <div class="chart-card" style="margin-top:28px;">
+    <div class="card-header">
+      <!-- // MODIFY THIS: dynamic history title based on time scale -->
+      <div class="card-title" id="history-title">7-Day History</div>
+      <div class="card-badge" id="history-badge">Firebase /energy/history</div>
+    </div>
+    <table id="history-table">
+      <thead><tr>
+        <th id="history-col-date">Date</th>
+        <th>Units (kWh)</th>
+        <th>Cost (₹)</th>
+      </tr></thead>
+      <tbody id="history-tbody">
+        <tr><td colspan="3" style="color:var(--muted);padding:14px;">Loading history…</td></tr>
+      </tbody>
+    </table>
+    <p class="hist-note" id="history-note">ℹ Showing last 7 days. For detailed history, contact administrator.</p>
+  </div>
+
+  <div class="last-updated">
+    Last data received: <span id="last-ts">—</span>&nbsp;·&nbsp;GridSense v3.0
+  </div>
+</div><!-- .page -->
+</div><!-- #dashboard-screen -->
+
+<!-- ═══ SETTINGS PANEL ═══════════════════════════════════════ -->
+<div id="settings-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+    <div style="font-size:18px;font-weight:800;color:var(--text);">Settings</div>
+    <button class="modal-close-btn" onclick="closeSettings()" style="position:static;">✕</button>
+  </div>
+
+  <!-- Theme -->
+  <div class="settings-section">
+    <span class="settings-label">Appearance</span>
+    <div class="toggle-row">
+      <span class="toggle-label">🌙 Dark Mode</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="theme-toggle" checked onchange="toggleTheme(this)" />
+        <div class="toggle-track"></div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Account -->
+  <div class="settings-section">
+    <span class="settings-label">Account</span>
+    <div class="field-group">
+      <label class="field-label">Change Email</label>
+      <input class="field-input" id="settings-email" type="email" placeholder="New email" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Change Password</label>
+      <input class="field-input" id="settings-pass" type="password" placeholder="New password" />
+    </div>
+    <button class="btn-accent" style="width:100%;margin-top:4px;" onclick="saveCredentials()">Save Credentials</button>
+  </div>
+
+  <!-- Contact Admin -->
+  <div class="settings-section">
+    <span class="settings-label">Contact Admin</span>
+    <div class="contact-row">📧 <span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c0a1a4ada9ae80a7b2a9a4b3a5aeb3a5eea9af">[email&#160;protected]</a></span></div>
+    <div class="contact-row">📞 <span>+91 98765 43210</span></div>
+  </div>
+
+  <!-- // ADD THIS: Global Budget Settings -->
+  <div class="settings-section">
+    <span class="settings-label">Global Budget</span>
+    <div class="field-group">
+      <label class="field-label">Daily Budget (₹)</label>
+      <input class="field-input" id="settings-daily-budget" type="number" min="1" step="1" placeholder="e.g. 50" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Daily Limit (kWh)</label>
+      <input class="field-input" id="settings-daily-limit" type="number" min="0.1" step="0.1" placeholder="e.g. 5.0" />
+    </div>
+    <button class="btn-accent" style="width:100%;margin-top:4px;" onclick="saveBudgetSettings()">Save Budget →</button>
+  </div>
+
+  <!-- Complaints -->
+  <div class="settings-section">
+    <span class="settings-label">Submit a Complaint</span>
+    <div class="field-group">
+      <textarea class="field-input" id="complaint-text" placeholder="Describe your issue…"></textarea>
+    </div>
+    <button class="btn-accent" style="width:100%;" onclick="submitComplaint()">Submit →</button>
+  </div>
+
+  <!-- Coming soon -->
+  <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:16px 0;border-top:1px solid var(--border);margin-top:8px;">
+    ✦ More features coming soon…
+  </div>
+
+  <!-- Logout -->
+  <button class="btn-danger" onclick="doLogout()">🚪 Logout</button>
+</div>
+
+<!-- ═══ ADD ROOM MODAL ═══════════════════════════════════════ -->
+<div class="modal-overlay" id="add-room-modal">
+  <div class="modal-box">
+    <button class="modal-close-btn" onclick="closeModal('add-room-modal')">✕</button>
+    <div class="modal-title">Add New Room</div>
+    <div class="modal-sub">New room appears once ESP32 sends data for that key</div>
+    <div class="form-error" id="add-room-error"></div>
+    <div class="field-group">
+      <label class="field-label">Room Name</label>
+      <input class="field-input" id="new-room-name" placeholder="e.g. Bedroom 3" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Room Key <span style="font-size:9px;">(must match ESP32 JSON key)</span></label>
+      <input class="field-input" id="new-room-key" placeholder="e.g. room5" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Room Type</label>
+      <select class="field-input" id="new-room-type">
+        <option value="Bedroom">Bedroom</option>
+        <option value="Living Room">Living Room</option>
+        <option value="Kitchen">Kitchen</option>
+        <option value="Office">Office</option>
+        <option value="Bathroom">Bathroom</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Icon (emoji)</label>
+      <input class="field-input" id="new-room-icon" placeholder="e.g. 🛏️" maxlength="4" />
+    </div>
+    <div class="btn-row">
+      <button class="btn-accent" onclick="confirmAddRoom()">Add Room</button>
+      <button class="btn-ghost" onclick="closeModal('add-room-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROOM DETAIL MODAL ════════════════════════════════════ -->
+<div class="modal-overlay" id="room-detail-modal">
+  <div class="modal-box">
+    <button class="modal-close-btn" onclick="closeModal('room-detail-modal')">✕</button>
+    <div class="room-detail-header">
+      <div class="room-detail-icon" id="rd-icon">💡</div>
+      <div>
+        <div class="modal-title" id="rd-name">Room</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);" id="rd-type">—</div>
+      </div>
+    </div>
+    <div class="room-stat-grid">
+      <div class="room-stat-box">
+        <div class="room-stat-box-label">Current Power</div>
+        <div class="room-stat-box-val" id="rd-watts">—<span class="unit"> W</span></div>
+      </div>
+      <div class="room-stat-box">
+        <div class="room-stat-box-label">% of Total</div>
+        <div class="room-stat-box-val" id="rd-pct">—<span class="unit"> %</span></div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Number of Appliances</label>
+      <input class="field-input" id="rd-appliances" type="number" min="0" placeholder="e.g. 3" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Room Budget (₹/day)</label>
+      <input class="field-input" id="rd-budget" type="number" min="0" placeholder="e.g. 15" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Usage Limit (kWh/day)</label>
+      <input class="field-input" id="rd-limit" type="number" min="0" step="0.1" placeholder="e.g. 2.5" />
+    </div>
+    <div class="btn-row">
+      <button class="btn-accent" onclick="saveRoomDetail()">Save</button>
+      <button class="btn-ghost" onclick="closeModal('room-detail-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- // ADD THIS: Power Graph Modal -->
+<div class="modal-overlay" id="power-graph-modal">
+  <div class="modal-box">
+    <button class="modal-close-btn" onclick="closePowerGraph()">✕</button>
+    <div class="pgraph-header">
+      <div class="pgraph-title">⚡ Total Power — Real-time Monitor</div>
+      <div class="pgraph-live-pill"><div class="pgraph-live-dot"></div> LIVE</div>
+    </div>
+    <div class="pgraph-toggles">
+      <button class="pgraph-toggle-btn active" id="pg-btn-seconds" onclick="setPgView('seconds')">Seconds</button>
+      <button class="pgraph-toggle-btn"        id="pg-btn-minutes" onclick="setPgView('minutes')">Minutes</button>
+      <button class="pgraph-toggle-btn"        id="pg-btn-hours"   onclick="setPgView('hours')">Hours</button>
+    </div>
+    <canvas id="power-graph-canvas"></canvas>
+    <div class="pgraph-stats">
+      <div class="pgraph-stat">Current: <span id="pg-current">—</span> W</div>
+      <div class="pgraph-stat">Peak: <span id="pg-peak">—</span> W</div>
+      <div class="pgraph-stat">Avg: <span id="pg-avg">—</span> W</div>
+      <div class="pgraph-stat">Points: <span id="pg-count">—</span></div>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+/* ════════════════════════════════════════════════════════════════
+   AUTH — LOGIN SYSTEM
+════════════════════════════════════════════════════════════════ */
+const DEMO_EMAIL    = "admin@gridsense.io";
+const DEMO_PASS     = "gridsense123";
+let   _otpCode      = "";
+let   _resendTimer  = null;
+let   _currentEmail = "";
+let   _pendingSignup = false; // true when OTP was triggered by signup flow
+
+// // ADD THIS: Signup helpers
+function openSignup() {
+  document.getElementById('step-login').style.display   = 'none';
+  document.getElementById('step-verify').style.display  = 'none';
+  document.getElementById('step-signup').style.display  = 'block';
+  document.getElementById('signup-link-row').style.display = 'none';
+  document.getElementById('signup-error').classList.remove('show');
+}
+
+function doSignup() {
+  const email = document.getElementById('signup-email').value.trim();
+  const pass  = document.getElementById('signup-pass').value;
+  const err   = document.getElementById('signup-error');
+  err.classList.remove('show');
+  if (!email || !pass) { err.textContent = "Please fill in both fields."; err.classList.add('show'); return; }
+  if (pass.length < 6)  { err.textContent = "Password must be at least 6 characters."; err.classList.add('show'); return; }
+  // Save credentials to localStorage
+  localStorage.setItem('gs_user_email', email);
+  localStorage.setItem('gs_user_pass',  pass);
+  // Generate & "send" OTP
+  _currentEmail   = email;
+  _pendingSignup  = true;
+  _otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log(`[GridSense] Signup OTP for ${email}: ${_otpCode}`);
+  // Show OTP verify screen
+  document.getElementById('signup-email').value = '';
+  document.getElementById('signup-pass').value  = '';
+  document.getElementById('step-signup').style.display  = 'none';
+  document.getElementById('step-verify').style.display  = 'block';
+  document.getElementById('verify-email-label').textContent = email;
+  startResendTimer();
+  setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
+}
+
+// // REPLACE THIS: doLogin — now checks localStorage first, falls back to demo
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-error');
+  err.classList.remove('show');
+  if (!email || !pass) { err.textContent = "Please fill in both fields."; err.classList.add('show'); return; }
+  const storedEmail = localStorage.getItem('gs_user_email');
+  const storedPass  = localStorage.getItem('gs_user_pass');
+  const validUser   = storedEmail && storedPass
+    ? (email === storedEmail && pass === storedPass)
+    : (email === DEMO_EMAIL  && pass === DEMO_PASS);
+  if (!validUser) { err.textContent = "Invalid email or password."; err.classList.add('show'); return; }
+  _currentEmail  = email;
+  _pendingSignup = false;
+  _otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log(`[GridSense] OTP for ${email}: ${_otpCode}`);
+  document.getElementById('verify-email-label').textContent = email;
+  document.getElementById('signup-link-row').style.display = 'none';
+  document.getElementById('step-login').style.display  = 'none';
+  document.getElementById('step-verify').style.display = 'block';
+  startResendTimer();
+  setTimeout(() => document.querySelector('.otp-digit').focus(), 100);
+}
+
+// OTP digit auto-advance
+document.querySelectorAll('.otp-digit').forEach((inp, idx, all) => {
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g,'').slice(0,1);
+    if (inp.value && idx < all.length - 1) all[idx+1].focus();
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !inp.value && idx > 0) all[idx-1].focus();
+    if (e.key === 'Enter') doVerify();
+  });
+});
+
+function doVerify() {
+  const entered = [...document.querySelectorAll('.otp-digit')].map(i => i.value).join('');
+  const err = document.getElementById('verify-error');
+  err.classList.remove('show');
+  if (entered.length < 6) { err.textContent = "Enter all 6 digits."; err.classList.add('show'); return; }
+  if (entered !== _otpCode) { err.textContent = "Incorrect code. Try again."; err.classList.add('show'); return; }
+  openDashboard();
+}
+
+function resendOTP() {
+  _otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log(`[GridSense] New OTP: ${_otpCode}`);
+  document.querySelectorAll('.otp-digit').forEach(i => i.value = '');
+  document.getElementById('verify-error').classList.remove('show');
+  startResendTimer();
+  document.querySelector('.otp-digit').focus();
+}
+
+function startResendTimer() {
+  const btn = document.getElementById('resend-btn');
+  const lbl = document.getElementById('resend-timer');
+  btn.classList.remove('ready');
+  let sec = 30;
+  lbl.textContent = ` (${sec}s)`;
+  clearInterval(_resendTimer);
+  _resendTimer = setInterval(() => {
+    sec--;
+    lbl.textContent = ` (${sec}s)`;
+    if (sec <= 0) { clearInterval(_resendTimer); btn.classList.add('ready'); lbl.textContent = ''; }
+  }, 1000);
+}
+
+// // REPLACE THIS: backToLogin — restore signup-link-row and handle signup flow
+function backToLogin() {
+  document.getElementById('step-verify').style.display  = 'none';
+  document.getElementById('step-signup').style.display  = 'none';
+  document.getElementById('step-login').style.display   = 'block';
+  document.getElementById('signup-link-row').style.display = 'block';
+  _pendingSignup = false;
+  clearInterval(_resendTimer);
+}
+
+function openDashboard() {
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('dashboard-screen').classList.add('active');
+  initDashboard();
+}
+
+function doLogout() {
+  closeSettings();
+  document.getElementById('dashboard-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('step-verify').style.display  = 'none';
+  document.getElementById('step-signup').style.display  = 'none';
+  document.getElementById('step-login').style.display   = 'block';
+  document.getElementById('signup-link-row').style.display = 'block';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  _pendingSignup = false;
+  stopSimulation();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CONFIGURATION
+════════════════════════════════════════════════════════════════ */
+const ROOM_META = {
+  room1: { label:"Room 1",  icon:"🛏️", type:"Bedroom",     appliances:2, budget:15, limit:1.5 },
+  room2: { label:"Room 2",  icon:"🖥️", type:"Office",      appliances:3, budget:20, limit:2.0 },
+  room3: { label:"Kitchen", icon:"🍳", type:"Kitchen",     appliances:4, budget:10, limit:1.0 },
+  room4: { label:"Living",  icon:"🛋️", type:"Living Room", appliances:5, budget:15, limit:1.5 },
+};
+
+const MAX_HISTORY       = 20;
+// // REPLACE THIS: DAILY_BUDGET_INR is now read from localStorage via getDailyBudget()
+const BUDGET_WARN_PCT   = 80;
+const SPIKE_MULTIPLIER  = 1.5;
+const NIGHT_START_HR    = 23;
+const NIGHT_END_HR      = 5;
+
+// // ADD THIS: Dynamic budget/limit getters (fallback to defaults if not set)
+function getDailyBudget() { return parseFloat(localStorage.getItem('gs_daily_budget')) || 50; }
+function getDailyLimitKwh() { return parseFloat(localStorage.getItem('gs_daily_limit_kwh')) || 0; }
+
+/* CESC TARIFF SLABS (units, rate ₹/unit) */
+const CESC_SLABS = [
+  { upto: 25,  rate: 5.18 },
+  { upto: 60,  rate: 5.69 },
+  { upto: 100, rate: 6.70 },
+  { upto: 150, rate: 7.45 },
+  { upto: 200, rate: 7.62 },
+  { upto: 300, rate: 7.62 },
+  { upto: Infinity, rate: 9.21 },
+];
+
+/* ════════════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════════════ */
+let history        = [];
+let prevDay        = [];
+let peakWatts      = 0;
+let peakTime       = null;
+let simInterval    = null;
+let isSimulating   = false;
+let eventMode      = false;
+let budgetUsed     = 0;
+let budgetAlertFired = false;
+let lineChart, donutChart, barChart;
+
+// Hourly aggregation buckets
+let hourlyBuckets   = {};   // { "HH": { totalW: 0, count: 0, cost: 0 } }
+let currentHourKey  = "";
+let lastHourlyUpdate = 0;   // timestamp of last hourly KPI update
+let monthlykWh      = 0;    // accumulated kWh this session (proxy for monthly)
+let lastReadingTime = null; // for energy accumulation
+
+// Room data for detail modal
+let _activeRoomKey = "";
+let _lastSnap = null;
+
+// // ADD THIS: Power graph data stores
+const PG_MAX_SECONDS = 60;
+const PG_MAX_MINUTES = 60;
+const PG_MAX_HOURS   = 24;
+
+let pgSecBuf = []; // { t: label, w: watts }
+let pgMinBuf = []; // { t: label, w: avgWatts, count, sum }
+let pgHrBuf  = []; // { t: label, w: avgWatts, count, sum }
+let pgView   = 'seconds'; // 'seconds' | 'minutes' | 'hours'
+let pgChart  = null;
+let pgOpen   = false;
+
+// // ADD THIS: Global time-scale state + unified multi-scale buffers for all charts
+let CURRENT_TIME_SCALE = 'seconds'; // 'seconds' | 'minutes' | 'hours'
+
+// Unified seconds/minutes/hours data stores shared across all charts
+// Each entry: { t: timeLabel, w: avgWatts, cost: totalCost, count, sum, sumCost }
+let tsSecBuf = []; // raw second-level readings
+let tsMinBuf = []; // minute-aggregated
+let tsHrBuf  = []; // hour-aggregated
+
+// Per-scale peak tracking
+let peakByScale = { seconds: { w: 0, ts: null }, minutes: { w: 0, ts: null }, hours: { w: 0, ts: null } };
+
+/* ════════════════════════════════════════════════════════════════
+   CESC TARIFF FUNCTION
+════════════════════════════════════════════════════════════════ */
+function calculateMonthlyBill(units) {
+  let remaining = units;
+  let bill      = 0;
+  let prevLimit = 0;
+  let currentSlab = null;
+  let currentRate = 0;
+
+  for (const slab of CESC_SLABS) {
+    const slabUnits = Math.min(remaining, slab.upto - prevLimit);
+    if (slabUnits <= 0) break;
+    bill += slabUnits * slab.rate;
+    remaining -= slabUnits;
+    prevLimit = slab.upto;
+    currentSlab = slab.upto === Infinity ? "Above 300 units" : `Up to ${slab.upto} units`;
+    currentRate = slab.rate;
+    if (remaining <= 0) break;
+  }
+  return { bill: parseFloat(bill.toFixed(2)), slab: currentSlab, rate: currentRate };
+}
+
+function updateCESCPanel() {
+  const { bill, slab, rate } = calculateMonthlyBill(monthlykWh);
+  setText('cesc-units', `${monthlykWh.toFixed(3)}<span class="unit"> kWh</span>`);
+  setText('cesc-bill',  `₹${bill.toFixed(2)}`);
+  setText('cesc-slab',  slab || "—");
+  setText('cesc-rate',  rate ? `${rate}<span class="unit"> ₹/unit</span>` : "—");
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CHART SETUP
+════════════════════════════════════════════════════════════════ */
+const TOOLTIP_STYLE = {
+  backgroundColor:'#111620', borderColor:'#1e2a3a', borderWidth:1,
+  titleColor:'#6b7a90', bodyColor:'#e8edf5',
+  titleFont:{family:'Space Mono',size:10}, bodyFont:{family:'Space Mono',size:12}, padding:10,
+};
+const BASE_OPTS = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{display:false}, tooltip:TOOLTIP_STYLE },
+};
+const AXIS = {
+  ticks:{color:'#6b7a90',font:{family:'Space Mono',size:9},maxTicksLimit:8},
+  grid:{color:'#1e2a3a'}, border:{color:'#1e2a3a'},
+};
+
+function setupCharts() {
+  lineChart = new Chart(document.getElementById('lineChart').getContext('2d'), {
+    type:'line',
+    data:{ labels:[], datasets:[{
+      label:'Power (W)', data:[],
+      borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,0.07)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#00e5a0', tension:0.4, fill:true,
+    }]},
+    options:{ ...BASE_OPTS, scales:{ x:AXIS, y:AXIS } }
+  });
+
+  donutChart = new Chart(document.getElementById('donutChart').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{
+      data:[], backgroundColor:['#00e5a0','#0090ff','#ff6b35','#a855f7','#f5c518','#06b6d4'],
+      borderColor:'#111620', borderWidth:3, hoverOffset:8,
+    }]},
+    options:{
+      ...BASE_OPTS, cutout:'62%',
+      plugins:{
+        ...BASE_OPTS.plugins, tooltip:TOOLTIP_STYLE,
+        legend:{ display:true, position:'bottom',
+          labels:{color:'#6b7a90',font:{family:'Space Mono',size:10},padding:12,boxWidth:10} }
+      }
+    }
+  });
+
+  barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{
+      label:'Cost (₹)', data:[],
+      backgroundColor:'rgba(0,144,255,0.25)', borderColor:'#0090ff',
+      borderWidth:1.5, borderRadius:4,
+    }]},
+    options:{ ...BASE_OPTS, scales:{ x:{...AXIS,grid:{display:false}}, y:AXIS } }
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   HOURLY AGGREGATION
+════════════════════════════════════════════════════════════════ */
+function getHourKey(ts) {
+  const d = new Date(ts * 1000);
+  return `${String(d.getHours()).padStart(2,'0')}:00`;
+}
+
+function accumulateHourly(snap) {
+  const hKey = getHourKey(snap.timestamp);
+
+  // Energy accumulation: power × time elapsed
+  if (lastReadingTime !== null) {
+    const elapsedHours = (snap.timestamp - lastReadingTime) / 3600;
+    const kwhIncrement = (snap.total / 1000) * elapsedHours;
+    monthlykWh += kwhIncrement;
+  }
+  lastReadingTime = snap.timestamp;
+
+  if (!hourlyBuckets[hKey]) {
+    hourlyBuckets[hKey] = { totalW:0, count:0, cost:0 };
+  }
+  hourlyBuckets[hKey].totalW += snap.total;
+  hourlyBuckets[hKey].count  += 1;
+  hourlyBuckets[hKey].cost   += snap.cost;
+
+  // // ADD THIS: also feed the global unified ts buffers
+  tsFeedData(snap);
+
+  // Refresh charts based on current global scale
+  refreshAllCharts();
+}
+
+// // ADD THIS: Feed unified ts buffers (seconds / minutes / hours)
+function tsFeedData(snap) {
+  const ts = snap.timestamp;
+  const w  = snap.total;
+  const c  = snap.cost;
+
+  const secLabel = new Date(ts * 1000).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const minLabel = new Date(ts * 1000).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  const hrLabel  = new Date(ts * 1000).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }).replace(/:\d\d$/, ':00');
+
+  // --- Seconds buffer ---
+  tsSecBuf.push({ t: secLabel, w, cost: c, count: 1, sum: w, sumCost: c });
+  if (tsSecBuf.length > PG_MAX_SECONDS) tsSecBuf.shift();
+
+  // --- Minutes buffer ---
+  const lastMin = tsMinBuf[tsMinBuf.length - 1];
+  if (lastMin && lastMin.t === minLabel) {
+    lastMin.sum += w; lastMin.count++; lastMin.w = Math.round(lastMin.sum / lastMin.count);
+    lastMin.sumCost += c; lastMin.cost = parseFloat(lastMin.sumCost.toFixed(4));
+  } else {
+    tsMinBuf.push({ t: minLabel, w, cost: c, count: 1, sum: w, sumCost: c });
+    if (tsMinBuf.length > PG_MAX_MINUTES) tsMinBuf.shift();
+  }
+
+  // --- Hours buffer ---
+  const lastHr = tsHrBuf[tsHrBuf.length - 1];
+  if (lastHr && lastHr.t === hrLabel) {
+    lastHr.sum += w; lastHr.count++; lastHr.w = Math.round(lastHr.sum / lastHr.count);
+    lastHr.sumCost += c; lastHr.cost = parseFloat(lastHr.sumCost.toFixed(4));
+  } else {
+    tsHrBuf.push({ t: hrLabel, w, cost: c, count: 1, sum: w, sumCost: c });
+    if (tsHrBuf.length > PG_MAX_HOURS) tsHrBuf.shift();
+  }
+
+  // Per-scale peak tracking
+  if (w > (peakByScale.seconds.w || 0)) { peakByScale.seconds = { w, ts }; }
+  const minAvg = tsMinBuf.length ? tsMinBuf[tsMinBuf.length-1].w : 0;
+  if (minAvg > (peakByScale.minutes.w || 0)) { peakByScale.minutes = { w: minAvg, ts }; }
+  const hrAvg = tsHrBuf.length ? tsHrBuf[tsHrBuf.length-1].w : 0;
+  if (hrAvg > (peakByScale.hours.w || 0)) { peakByScale.hours = { w: hrAvg, ts }; }
+}
+
+// // ADD THIS: Get active buffer for the current global time scale
+function tsGetActiveBuf() {
+  if (CURRENT_TIME_SCALE === 'seconds') return tsSecBuf;
+  if (CURRENT_TIME_SCALE === 'minutes') return tsMinBuf;
+  return tsHrBuf;
+}
+
+// // ADD THIS: Refresh ALL charts and labels from the current global time scale
+function refreshAllCharts() {
+  const buf = tsGetActiveBuf();
+  if (!buf.length) return;
+
+  const labels = buf.map(p => p.t);
+  const watts  = buf.map(p => p.w);
+  const costs  = buf.map(p => p.cost);
+
+  // --- lineChart (Energy Usage) ---
+  lineChart.data.labels           = labels;
+  lineChart.data.datasets[0].data = watts;
+  lineChart.update('none');
+
+  // --- barChart (Cost Trend) ---
+  barChart.data.labels           = labels;
+  barChart.data.datasets[0].data = costs;
+  barChart.update('none');
+
+  // --- Update all dynamic labels ---
+  updateScaleLabels();
+
+  // --- Refresh history table if on live-buffer scales ---
+  if (CURRENT_TIME_SCALE === 'seconds' || CURRENT_TIME_SCALE === 'minutes') {
+    refreshHistoryFromBuffer();
+  }
+
+  // --- Refresh power graph modal if open ---
+  if (pgOpen && pgChart) pgRefreshChart();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DATA INGESTION
+════════════════════════════════════════════════════════════════ */
+function ingestData(payload) {
+  const reserved = ['total','cost','timestamp'];
+  const rooms = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (!reserved.includes(k)) rooms[k] = Number(v);
+  }
+  const snap = {
+    total    : Number(payload.total),
+    cost     : Number(payload.cost),
+    timestamp: Number(payload.timestamp),
+    rooms,
+  };
+  history.push(snap);
+  if (history.length > MAX_HISTORY) history.shift();
+  _lastSnap = snap;
+
+  // Peak tracking
+  if (snap.total > peakWatts) { peakWatts = snap.total; peakTime = snap.timestamp; }
+
+  // Always: total power + rooms (10s feel)
+  renderTotalPower(snap);
+  renderRooms(snap);
+  updateDonut(snap);
+  accumulateHourly(snap);
+  updateCESCPanel();
+  setText('last-ts', fmtDatetime(snap.timestamp));
+
+  // Hourly KPIs — only update once per simulated hour bucket change OR every 3600s real time
+  const nowHKey = getHourKey(snap.timestamp);
+  const now     = Date.now();
+  if (nowHKey !== currentHourKey || (now - lastHourlyUpdate) >= 3600000) {
+    currentHourKey  = nowHKey;
+    lastHourlyUpdate = now;
+    updateHourlyKPIs(snap);
+  }
+
+  runAlerts(snap);
+
+  // // ADD THIS: feed power graph buffers
+  pgFeedData(snap);
+}
+
+function renderTotalPower(snap) {
+  setText('kpi-total', `${snap.total}<span class="unit"> W</span>`);
+}
+
+function updateHourlyKPIs(snap) {
+  // // MODIFY THIS: scale-aware cost estimation
+  let displayCost;
+  if (CURRENT_TIME_SCALE === 'hours') {
+    // Normal: full accumulated daily cost via CESC
+    displayCost = calculateMonthlyBill(monthlykWh).bill;
+  } else if (CURRENT_TIME_SCALE === 'minutes') {
+    // Extrapolate: current minute rate × 1440 minutes/day
+    const buf = tsMinBuf;
+    const avgW = buf.length ? buf.reduce((a,b)=>a+b.w,0)/buf.length : snap.total;
+    displayCost = parseFloat(((avgW / 1000) * 24 * 7).toFixed(2)); // ₹7/kWh × 24h
+  } else {
+    // Seconds: use raw instant cost from CESC on current wattage
+    displayCost = parseFloat(((snap.total / 1000) * 24 * 7).toFixed(2));
+  }
+
+  setText('kpi-cost', `${displayCost.toFixed(1)}<span class="unit"> ₹</span>`);
+
+  // Scale-specific sub-label
+  const costSubMap = { seconds: 'Extrapolated (daily est.)', minutes: 'Extrapolated (daily est.)', hours: 'Estimated today' };
+  setText('kpi-cost-sub', costSubMap[CURRENT_TIME_SCALE]);
+
+  // Budget %
+  budgetUsed = CURRENT_TIME_SCALE === 'hours' ? calculateMonthlyBill(monthlykWh).bill : displayCost;
+  const _budget = getDailyBudget();
+  const pct  = Math.min((budgetUsed / _budget * 100), 999);
+  const el   = document.getElementById('kpi-budget');
+  if (el) {
+    el.innerHTML = `${pct.toFixed(0)}<span class="unit"> %</span>`;
+    el.style.color = pct >= 100 ? 'var(--warn)' : pct >= BUDGET_WARN_PCT ? 'var(--gold)' : 'var(--text)';
+  }
+  setText('kpi-budget-sub', `₹${budgetUsed.toFixed(1)} of ₹${_budget} today`);
+  const bar = document.getElementById('budget-bar');
+  if (bar) {
+    bar.style.width      = Math.min(pct,100) + '%';
+    bar.style.background = pct >= 100 ? 'var(--warn)' : pct >= BUDGET_WARN_PCT ? 'var(--gold)' : 'var(--accent)';
+  }
+
+  // Delta vs yesterday
+  renderDelta(snap);
+
+  // // MODIFY THIS: scale-aware peak display
+  const scalePeak = peakByScale[CURRENT_TIME_SCALE] || { w: peakWatts, ts: peakTime };
+  const displayPeak = scalePeak.w || peakWatts;
+  const displayPeakTs = scalePeak.ts || peakTime;
+  setText('kpi-peak', `${displayPeak}<span class="unit"> W</span>`);
+  setText('kpi-peak-time', displayPeakTs ? `at ${fmtTime(displayPeakTs)}` : '—');
+
+  // Comparison bars
+  renderComparison(snap);
+}
+
+function renderDelta(snap) {
+  if (!prevDay.length) {
+    setText('kpi-delta', `—<span class="unit"> %</span>`);
+    setText('kpi-delta-sub', 'No previous data');
+    return;
+  }
+  const avg   = prevDay.reduce((a,b)=>a+b,0) / prevDay.length;
+  const delta = ((snap.total - avg) / avg * 100).toFixed(1);
+  const sign  = delta > 0 ? '+' : '';
+  document.getElementById('kpi-delta').style.color = delta > 0 ? 'var(--warn)' : 'var(--accent)';
+  setText('kpi-delta', `${sign}${delta}<span class="unit"> %</span>`);
+  setText('kpi-delta-sub', delta > 0 ? '↑ Higher than yesterday' : '↓ Lower than yesterday');
+}
+
+function renderRooms(snap) {
+  const grid    = document.getElementById('rooms-grid');
+  const total   = snap.total || 1;
+  const entries = Object.entries(snap.rooms);
+  if (!entries.length) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:13px;">No room data in payload.</p>';
+    return;
+  }
+  grid.innerHTML = entries.map(([key, watts]) => {
+    const meta = ROOM_META[key] || { label:key, icon:'💡', type:'Other' };
+    const pct  = Math.min(100, (watts / total * 100)).toFixed(0);
+    return `<div class="room-card" onclick="openRoomDetail('${key}', ${watts}, ${total})">
+      <button class="room-remove-btn" onclick="event.stopPropagation();removeRoom('${key}')" title="Remove room">✕</button>
+      <div class="room-icon">${meta.icon}</div>
+      <div class="room-name">${meta.label}</div>
+      <div class="room-watts">${watts}<span> W</span></div>
+      <div class="room-bar-track"><div class="room-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  setText('rooms-total-badge', `Total: ${snap.total} W`);
+}
+
+function updateDonut(snap) {
+  const entries = Object.entries(snap.rooms);
+  if (!entries.length) return;
+  donutChart.data.labels             = entries.map(([k]) => (ROOM_META[k]||{label:k}).label);
+  donutChart.data.datasets[0].data   = entries.map(([,v]) => v);
+  donutChart.update('none');
+}
+
+function renderComparison(snap) {
+  const list  = document.getElementById('compare-list');
+  const rooms = Object.entries(snap.rooms);
+  if (!rooms.length) return;
+  const maxW  = Math.max(...rooms.map(([,v])=>v), 1);
+  list.innerHTML = rooms.flatMap(([key, watts]) => {
+    const meta   = ROOM_META[key] || { label:key };
+    const yday   = Math.round(watts * (0.82 + Math.random() * 0.36));
+    const todPct = (watts / maxW * 100).toFixed(0);
+    const yPct   = (yday  / maxW * 100).toFixed(0);
+    return [
+      `<li class="compare-row">
+        <span class="compare-label">${meta.label}</span>
+        <div class="compare-bar-wrap"><div class="compare-bar" style="width:${todPct}%"></div></div>
+        <span class="compare-val">${watts}W</span>
+      </li>`,
+      `<li class="compare-row" style="margin-bottom:4px;">
+        <span class="compare-label" style="opacity:0.45">Yest.</span>
+        <div class="compare-bar-wrap"><div class="compare-bar" style="width:${yPct}%;background:var(--border)"></div></div>
+        <span class="compare-val" style="opacity:0.45">${yday}W</span>
+      </li>`,
+    ];
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SMART ALERTS
+════════════════════════════════════════════════════════════════ */
+function runAlerts(snap) {
+  if (eventMode) return;
+  if (history.length >= 4) {
+    const slice = history.slice(-6);
+    const avg   = slice.reduce((a,b) => a + b.total, 0) / slice.length;
+    if (snap.total > SPIKE_MULTIPLIER * avg) {
+      showAlert(`⚡ Spike! ${snap.total}W is ${SPIKE_MULTIPLIER}× above recent avg (${Math.round(avg)}W).`);
+      return;
+    }
+  }
+  const pct = (budgetUsed / getDailyBudget() * 100);
+  if (pct >= BUDGET_WARN_PCT && !budgetAlertFired) {
+    budgetAlertFired = true;
+    showAlert(`💰 Budget: ₹${budgetUsed.toFixed(1)} used — ${pct.toFixed(0)}% of ₹${getDailyBudget()} daily limit.`);
+    return;
+  }
+  const hr = new Date(snap.timestamp * 1000).getHours();
+  if ((hr >= NIGHT_START_HR || hr < NIGHT_END_HR) && snap.total > 200) {
+    showAlert(`🌙 High usage (${snap.total}W) detected at ${fmtTime(snap.timestamp)}.`);
+  }
+}
+
+function showAlert(msg) {
+  document.getElementById('alert-msg').textContent = msg;
+  document.getElementById('alert-banner').classList.add('show');
+}
+function closeAlert() { document.getElementById('alert-banner').classList.remove('show'); }
+
+/* ════════════════════════════════════════════════════════════════
+   ROOM DETAIL MODAL
+════════════════════════════════════════════════════════════════ */
+function openRoomDetail(key, watts, total) {
+  _activeRoomKey = key;
+  const meta = ROOM_META[key] || { label:key, icon:'💡', type:'Other', appliances:0, budget:0, limit:0 };
+  setText('rd-icon', meta.icon);
+  setText('rd-name', meta.label);
+  setText('rd-type', meta.type || 'Unknown type');
+  setText('rd-watts', `${watts}<span class="unit"> W</span>`);
+  setText('rd-pct', `${Math.min(100,(watts/total*100)).toFixed(1)}<span class="unit"> %</span>`);
+  document.getElementById('rd-appliances').value = meta.appliances || '';
+  document.getElementById('rd-budget').value     = meta.budget     || '';
+  document.getElementById('rd-limit').value      = meta.limit      || '';
+  openModal('room-detail-modal');
+}
+
+function saveRoomDetail() {
+  if (!_activeRoomKey) return;
+  const meta = ROOM_META[_activeRoomKey] || {};
+  meta.appliances = parseInt(document.getElementById('rd-appliances').value) || 0;
+  meta.budget     = parseFloat(document.getElementById('rd-budget').value)   || 0;
+  meta.limit      = parseFloat(document.getElementById('rd-limit').value)    || 0;
+  ROOM_META[_activeRoomKey] = meta;
+  closeModal('room-detail-modal');
+  showAlert(`✅ Room "${meta.label}" settings saved.`);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ADD / REMOVE ROOM
+════════════════════════════════════════════════════════════════ */
+function openAddRoomModal() { openModal('add-room-modal'); }
+
+function confirmAddRoom() {
+  const name = document.getElementById('new-room-name').value.trim();
+  const key  = document.getElementById('new-room-key').value.trim().replace(/\s+/g,'_');
+  const type = document.getElementById('new-room-type').value;
+  const icon = document.getElementById('new-room-icon').value.trim() || '💡';
+  const err  = document.getElementById('add-room-error');
+  err.classList.remove('show');
+  if (!name || !key) { err.textContent = 'Name and key are required.'; err.classList.add('show'); return; }
+  if (ROOM_META[key]) { err.textContent = `Key "${key}" already exists.`; err.classList.add('show'); return; }
+  ROOM_META[key] = { label:name, icon, type, appliances:0, budget:0, limit:0 };
+  closeModal('add-room-modal');
+  if (_lastSnap) { _lastSnap.rooms[key] = 0; renderRooms(_lastSnap); }
+  showAlert(`✅ Room "${name}" added. Waiting for ESP32 data on key "${key}".`);
+}
+
+function removeRoom(key) {
+  const meta = ROOM_META[key];
+  if (!meta) return;
+  if (!confirm(`Remove "${meta.label}"? This only removes it from the UI.`)) return;
+  delete ROOM_META[key];
+  if (_lastSnap) { delete _lastSnap.rooms[key]; renderRooms(_lastSnap); updateDonut(_lastSnap); }
+  showAlert(`🗑 Room "${meta.label}" removed from dashboard.`);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SIMULATION
+════════════════════════════════════════════════════════════════ */
+function generateDummyPayload() {
+  const vals  = {};
+  let   total = 0;
+  Object.keys(ROOM_META).forEach(k => {
+    const w = 20 + Math.round(Math.random() * 120);
+    vals[k] = w; total += w;
+  });
+  const cost = parseFloat((total * 7 / 1000 / 3600 * 10).toFixed(3)); // ~10s interval
+  return { ...vals, total, cost, timestamp: Date.now()/1000|0 };
+}
+
+function startSimulation() {
+  if (simInterval) return;
+  isSimulating = true; budgetUsed = 0; budgetAlertFired = false; monthlykWh = 0; lastReadingTime = null;
+  prevDay = Array.from({length:8}, () => 150 + Math.round(Math.random()*100));
+  // // ADD THIS: reset global ts buffers on new simulation
+  tsSecBuf = []; tsMinBuf = []; tsHrBuf = [];
+  peakByScale = { seconds: { w: 0, ts: null }, minutes: { w: 0, ts: null }, hours: { w: 0, ts: null } };
+  pgSecBuf = []; pgMinBuf = []; pgHrBuf = [];
+  document.getElementById('sim-toggle').classList.add('active');
+  document.getElementById('sim-toggle').textContent = '⏹ Stop Sim';
+  setStatus('demo','Demo Mode');
+  ingestData(generateDummyPayload());
+  simInterval = setInterval(() => ingestData(generateDummyPayload()), 10000); // 10s
+}
+
+function stopSimulation() {
+  clearInterval(simInterval); simInterval = null; isSimulating = false;
+  document.getElementById('sim-toggle').classList.remove('active');
+  document.getElementById('sim-toggle').textContent = '⟳ Simulate';
+  setStatus('','Connecting…');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FIREBASE
+════════════════════════════════════════════════════════════════ */
+window.addEventListener('firebase-ready', () => {
+  setStatus('live','Live');
+  const db = window._firebaseDB;
+  window._firebaseOnValue(window._firebaseRef(db,'energy'), snap => {
+    const d = snap.val(); if (d) ingestData(d);
+  });
+  window._firebaseOnValue(window._firebaseRef(db,'energy/history'), snap => {
+    renderHistoryTable(snap.val());
+  });
+});
+window.addEventListener('firebase-error', () => {
+  setStatus('demo','Firebase offline');
+  renderHistoryTable(getDummyHistory());
+  setTimeout(startSimulation, 400);
+});
+
+/* ════════════════════════════════════════════════════════════════
+   7-DAY HISTORY
+════════════════════════════════════════════════════════════════ */
+function renderHistoryTable(rows) {
+  const tbody = document.getElementById('history-tbody');
+  if (!rows || !Object.keys(rows).length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:14px;color:var(--muted);">No history data found.</td></tr>';
+    return;
+  }
+  const entries = Object.entries(rows).sort((a,b) => b[0].localeCompare(a[0])).slice(0,7);
+  tbody.innerHTML = entries.map(([date,val]) =>
+    `<tr>
+      <td>${date}</td>
+      <td class="hist-units">${Number(val.units).toFixed(2)} kWh</td>
+      <td class="hist-cost">₹${Number(val.cost).toFixed(1)}</td>
+    </tr>`
+  ).join('');
+}
+function getDummyHistory() {
+  const out = {};
+  for (let i=1;i<=7;i++) {
+    const d = new Date(Date.now() - i*86400000);
+    const key = d.toISOString().split('T')[0];
+    const u = (2 + Math.random()*4).toFixed(2);
+    out[key] = { units:u, cost:(u*calculateMonthlyBill(parseFloat(u)).bill/parseFloat(u)||7).toFixed(1) };
+  }
+  return out;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SETTINGS
+════════════════════════════════════════════════════════════════ */
+function openSettings()  { document.getElementById('settings-panel').classList.add('open'); }
+function closeSettings() { document.getElementById('settings-panel').classList.remove('open'); }
+
+function toggleTheme(cb) {
+  document.body.classList.toggle('light', !cb.checked);
+}
+
+// // REPLACE THIS: saveCredentials — now persists to localStorage
+function saveCredentials() {
+  const email = document.getElementById('settings-email').value.trim();
+  const pass  = document.getElementById('settings-pass').value;
+  if (!email && !pass) { showAlert('⚠ Enter a new email or password to update.'); return; }
+  if (email) localStorage.setItem('gs_user_email', email);
+  if (pass)  localStorage.setItem('gs_user_pass',  pass);
+  showAlert('✅ Credentials updated and saved.');
+  document.getElementById('settings-email').value = '';
+  document.getElementById('settings-pass').value  = '';
+}
+
+// // ADD THIS: Save and load global budget settings
+function saveBudgetSettings() {
+  const budget = parseFloat(document.getElementById('settings-daily-budget').value);
+  const limit  = parseFloat(document.getElementById('settings-daily-limit').value);
+  if (budget > 0) localStorage.setItem('gs_daily_budget',    budget);
+  if (limit  > 0) localStorage.setItem('gs_daily_limit_kwh', limit);
+  budgetAlertFired = false; // reset alert so it can fire again at new threshold
+  showAlert(`✅ Budget set: ₹${budget || getDailyBudget()}/day · ${limit || getDailyLimitKwh() || '—'} kWh/day limit.`);
+  closeSettings();
+}
+
+function loadBudgetSettingsUI() {
+  const b = localStorage.getItem('gs_daily_budget');
+  const l = localStorage.getItem('gs_daily_limit_kwh');
+  if (b) document.getElementById('settings-daily-budget').value = b;
+  if (l) document.getElementById('settings-daily-limit').value  = l;
+}
+
+function submitComplaint() {
+  const txt = document.getElementById('complaint-text').value.trim();
+  if (!txt) { showAlert('⚠ Please describe your issue first.'); return; }
+  showAlert('✅ Complaint submitted. Admin will respond within 24 hours.');
+  document.getElementById('complaint-text').value = '';
+  closeSettings();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EVENT TOGGLE
+════════════════════════════════════════════════════════════════ */
+document.getElementById('event-toggle').addEventListener('click', () => {
+  eventMode = !eventMode;
+  const btn = document.getElementById('event-toggle');
+  if (eventMode) {
+    btn.classList.add('event-on'); btn.textContent = '⚑ Event: ON'; closeAlert();
+  } else {
+    btn.classList.remove('event-on'); btn.textContent = '⚑ Event: OFF';
+  }
+});
+document.getElementById('sim-toggle').addEventListener('click', () => {
+  isSimulating ? stopSimulation() : startSimulation();
+});
+
+/* ════════════════════════════════════════════════════════════════
+   MODAL HELPERS
+════════════════════════════════════════════════════════════════ */
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// Close on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => {
+    if (e.target === m) {
+      m.classList.remove('open');
+      if (m.id === 'power-graph-modal') pgOpen = false; // // ADD THIS
+    }
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════════════ */
+function setText(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
+function setStatus(type, text) {
+  document.getElementById('status-dot').className = 'status-dot ' + type;
+  document.getElementById('status-text').textContent = text;
+}
+function fmtTime(ts) {
+  return new Date(ts*1000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDatetime(ts) {
+  return new Date(ts*1000).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'medium'});
+}
+
+/* ════════════════════════════════════════════════════════════════
+   // ADD THIS: POWER GRAPH
+════════════════════════════════════════════════════════════════ */
+function pgFeedData(snap) {
+  const ts  = snap.timestamp;
+  const w   = snap.total;
+  const secLabel = new Date(ts * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const minLabel = new Date(ts * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const hrLabel  = new Date(ts * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }).replace(/:\d\d$/, ':00');
+
+  // Seconds buffer — one point per reading
+  pgSecBuf.push({ t: secLabel, w });
+  if (pgSecBuf.length > PG_MAX_SECONDS) pgSecBuf.shift();
+
+  // Minutes buffer — rolling avg per minute label
+  const lastMin = pgMinBuf[pgMinBuf.length - 1];
+  if (lastMin && lastMin.t === minLabel) {
+    lastMin.sum += w; lastMin.count++; lastMin.w = Math.round(lastMin.sum / lastMin.count);
+  } else {
+    pgMinBuf.push({ t: minLabel, w, sum: w, count: 1 });
+    if (pgMinBuf.length > PG_MAX_MINUTES) pgMinBuf.shift();
+  }
+
+  // Hours buffer — rolling avg per hour label
+  const lastHr = pgHrBuf[pgHrBuf.length - 1];
+  if (lastHr && lastHr.t === hrLabel) {
+    lastHr.sum += w; lastHr.count++; lastHr.w = Math.round(lastHr.sum / lastHr.count);
+  } else {
+    pgHrBuf.push({ t: hrLabel, w, sum: w, count: 1 });
+    if (pgHrBuf.length > PG_MAX_HOURS) pgHrBuf.shift();
+  }
+
+  // If modal is open, refresh chart live
+  if (pgOpen && pgChart) pgRefreshChart();
+}
+
+function pgGetActiveBuf() {
+  // // MODIFY THIS: use unified ts buffers so power graph stays in sync with global scale
+  if (pgView === 'seconds') return tsSecBuf.length ? tsSecBuf : pgSecBuf;
+  if (pgView === 'minutes') return tsMinBuf.length ? tsMinBuf : pgMinBuf;
+  return tsHrBuf.length ? tsHrBuf : pgHrBuf;
+}
+
+function pgRefreshChart() {
+  const buf = pgGetActiveBuf();
+  if (!buf.length) return;
+
+  pgChart.data.labels            = buf.map(p => p.t);
+  pgChart.data.datasets[0].data  = buf.map(p => p.w);
+  pgChart.update('none');
+
+  // Update stats
+  const watts = buf.map(p => p.w);
+  const cur   = watts[watts.length - 1];
+  const peak  = Math.max(...watts);
+  const avg   = Math.round(watts.reduce((a, b) => a + b, 0) / watts.length);
+  document.getElementById('pg-current').textContent = cur;
+  document.getElementById('pg-peak').textContent    = peak;
+  document.getElementById('pg-avg').textContent     = avg;
+  document.getElementById('pg-count').textContent   = buf.length;
+}
+
+function openPowerGraph() {
+  pgOpen = true;
+  document.getElementById('power-graph-modal').classList.add('open');
+
+  // Init chart once
+  if (!pgChart) {
+    const ctx = document.getElementById('power-graph-canvas').getContext('2d');
+    pgChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Power (W)',
+          data: [],
+          borderColor: '#00e5a0',
+          backgroundColor: 'rgba(0,229,160,0.08)',
+          borderWidth: 2,
+          pointRadius: 2,
+          pointBackgroundColor: '#00e5a0',
+          tension: 0.35,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 300 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111620', borderColor: '#1e2a3a', borderWidth: 1,
+            titleColor: '#6b7a90', bodyColor: '#e8edf5',
+            titleFont: { family: 'Space Mono', size: 10 },
+            bodyFont:  { family: 'Space Mono', size: 12 },
+            padding: 10,
+            callbacks: { label: ctx => `${ctx.parsed.y} W` }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#6b7a90', font: { family: 'Space Mono', size: 9 }, maxTicksLimit: 10, maxRotation: 0 },
+            grid:  { color: '#1e2a3a' }, border: { color: '#1e2a3a' },
+          },
+          y: {
+            ticks: { color: '#6b7a90', font: { family: 'Space Mono', size: 9 }, maxTicksLimit: 6,
+                     callback: v => v + ' W' },
+            grid:  { color: '#1e2a3a' }, border: { color: '#1e2a3a' },
+          }
+        }
+      }
+    });
+  }
+
+  pgRefreshChart();
+}
+
+function closePowerGraph() {
+  pgOpen = false;
+  document.getElementById('power-graph-modal').classList.remove('open');
+}
+
+function setPgView(view) {
+  // // MODIFY THIS: delegate to global scale controller so both toggles stay in sync
+  setGlobalTimeScale(view);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   // ADD THIS: SCALE-AWARE HISTORY TABLE FROM LIVE BUFFER
+════════════════════════════════════════════════════════════════ */
+function refreshHistoryFromBuffer() {
+  // For seconds/minutes scale, replace the history table with live buffer data
+  const tbody = document.getElementById('history-tbody');
+  if (!tbody) return;
+
+  const buf = CURRENT_TIME_SCALE === 'seconds' ? tsSecBuf : tsMinBuf;
+  if (!buf.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:14px;color:var(--muted);">No live buffer data yet. Start simulation.</td></tr>';
+    return;
+  }
+
+  // Show last 20 entries (most recent first) from the live buffer
+  const slice = [...buf].reverse().slice(0, 20);
+  const RATE  = 7; // ₹/kWh flat approximation for buffer display
+
+  tbody.innerHTML = slice.map(pt => {
+    const kwh  = CURRENT_TIME_SCALE === 'seconds'
+      ? ((pt.w / 1000) / 3600).toFixed(6)        // 1-second worth of kWh
+      : ((pt.w / 1000) / 60).toFixed(5);          // 1-minute worth of kWh
+    const cost = (parseFloat(kwh) * RATE).toFixed(4);
+    return `<tr>
+      <td style="font-family:var(--font-mono);font-size:11px;">${pt.t}</td>
+      <td class="hist-units">${kwh} kWh</td>
+      <td class="hist-cost">₹${cost}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   // ADD THIS: GLOBAL TIME-SCALE CONTROLLER
+════════════════════════════════════════════════════════════════ */
+function setGlobalTimeScale(scale) {
+  CURRENT_TIME_SCALE = scale;
+  pgView = scale; // keep power-graph modal in sync
+
+  // Update global toggle button states
+  ['seconds', 'minutes', 'hours'].forEach(v => {
+    document.getElementById(`gts-${v}`).classList.toggle('active', v === scale);
+    // Also keep power-graph modal toggles in sync
+    const pgBtn = document.getElementById(`pg-btn-${v}`);
+    if (pgBtn) pgBtn.classList.toggle('active', v === scale);
+  });
+
+  // Brief animation on chart switch
+  if (lineChart) { lineChart.options.animation = { duration: 350 }; }
+  if (barChart)  { barChart.options.animation  = { duration: 350 }; }
+
+  refreshAllCharts();
+
+  // Force KPI refresh with latest snap if available
+  if (_lastSnap) updateHourlyKPIs(_lastSnap);
+
+  // Restore no-animation
+  setTimeout(() => {
+    if (lineChart) lineChart.options.animation = { duration: 0 };
+    if (barChart)  barChart.options.animation  = { duration: 0 };
+  }, 400);
+}
+
+// // ADD THIS: Update all dynamic labels/titles based on CURRENT_TIME_SCALE
+function updateScaleLabels() {
+  const s = CURRENT_TIME_SCALE;
+
+  // Chart titles
+  const lineTitles    = { seconds: 'Energy Usage — Per Second',  minutes: 'Energy Usage — Per Minute',  hours: 'Energy Usage Over Time'    };
+  const barTitles     = { seconds: 'Second-wise Cost Trend',     minutes: 'Minute-wise Cost Trend',     hours: 'Hourly Cost Trend'          };
+  const lineBadges    = { seconds: 'Live · per second',          minutes: 'Rolling · per minute',       hours: 'Hourly averages'            };
+  const barBadges     = { seconds: '₹ / second',                 minutes: '₹ / minute',                 hours: '₹ / hour'                   };
+  const scaleTags     = { seconds: '⏱ live',                     minutes: '⏱ minute',                   hours: '⏱ hourly'                   };
+  const histTitles    = { seconds: 'Recent Readings (Seconds)',  minutes: 'Recent Readings (Minutes)',  hours: '7-Day History'              };
+  const histBadges    = { seconds: 'live buffer · last 60 pts',  minutes: 'rolling · last 60 pts',      hours: 'Firebase /energy/history'   };
+  const histColDates  = { seconds: 'Time (hh:mm:ss)',            minutes: 'Time (hh:mm)',               hours: 'Date'                       };
+  const histNotes     = {
+    seconds: 'ℹ Showing last 60 second-level readings from live buffer.',
+    minutes: 'ℹ Showing last 60 minute averages from live buffer.',
+    hours:   'ℹ Showing last 7 days. For detailed history, contact administrator.',
+  };
+  const compareTitles = { seconds: 'Now vs 60s Ago',            minutes: 'This Min vs Last Min',       hours: 'Today vs Yesterday'         };
+  const compareBadges = { seconds: 'Per room · instant',        minutes: 'Per room · minute avg',      hours: 'Per room'                   };
+
+  const el = (id) => document.getElementById(id);
+
+  if (el('lineChart-title'))    el('lineChart-title').textContent    = lineTitles[s];
+  if (el('chart-badge'))        el('chart-badge').textContent        = lineBadges[s];
+  if (el('barChart-title'))     el('barChart-title').textContent     = barTitles[s];
+  if (el('barChart-badge'))     el('barChart-badge').textContent     = barBadges[s];
+  if (el('history-title'))      el('history-title').textContent      = histTitles[s];
+  if (el('history-badge'))      el('history-badge').textContent      = histBadges[s];
+  if (el('history-col-date'))   el('history-col-date').textContent   = histColDates[s];
+  if (el('history-note'))       el('history-note').textContent       = histNotes[s];
+  if (el('compare-title'))      el('compare-title').textContent      = compareTitles[s];
+  if (el('compare-badge'))      el('compare-badge').textContent      = compareBadges[s];
+
+  // KPI badge labels
+  ['kpi-cost-scale-badge','kpi-delta-scale-badge','kpi-budget-scale-badge','kpi-peak-scale-badge'].forEach(id => {
+    if (el(id)) el(id).textContent = scaleTags[s];
+  });
+
+  // barChart dataset label
+  if (barChart) {
+    barChart.data.datasets[0].label = barBadges[s];
+    barChart.update('none');
+  }
+
+  // lineChart tooltip
+  if (lineChart) {
+    lineChart.options.plugins.tooltip.callbacks = { label: ctx => `${ctx.parsed.y} W` };
+    lineChart.update('none');
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════════ */
+function initDashboard() {
+  setupCharts();
+  loadBudgetSettingsUI(); // // ADD THIS: load saved budget into settings panel
+  prevDay = Array.from({length:8}, () => 150 + Math.round(Math.random()*100));
+  // // ADD THIS: apply default scale labels on dashboard init
+  updateScaleLabels();
+}
+</script>
+</body>
+</html>
